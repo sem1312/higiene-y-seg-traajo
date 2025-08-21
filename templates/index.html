@@ -1,62 +1,34 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/gh/devicons/devicon@2.15.1/devicon.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    <title>Portafolio</title>
+    <link href="{{ url_for('static', filename='css/index.css') }}" rel="stylesheet">
+    <title>Control de EPP+</title>
 </head>
+
 <body>
-    <a href="log_in" class="log_in_btn">Log in(solo para devs)</a>
-    <a href="logout" class="log_out_btn">Log out</a>
+    <label><input type="checkbox" id="cbox1" value="casco" /> casco</label><br />
 
-    <div class="content">
-        <h1>Hola, soy Patricio</h1>
-        <h2>Backend/Database Enjoyer</h2>
-        <p>Bilingual developer</p>
-        <a href="https://www.canva.com" class="btn-custom">CV</a>
-    </div>
+    <label><input type="checkbox" id="cbox2" value="guantes" /> guantes</label><br />
 
-    
-    
-    <div class="technologies-container">
-        <div class="languages-box">
-            <h3>Tecnologías que manejo</h3>
-            <div class="language-circles">
-                <div class="circle_tec">
-                    <div class="item"><a href="https://nodejs.org" target="_blank" title="Node.js"><i class="fab fa-node-js"></i></a></div>
-                    <div class="item"><a href="https://www.mongodb.com" target="_blank" title="MongoDB"><i class="devicon-mongodb-plain"></i></a></div>
-                    <div class="item"><a href="https://www.clever-cloud.com" target="_blank" title="Clever Cloud"><i class="fas fa-cloud"></i></a></div>
-                    <div class="item"><a href="https://visualstudio.microsoft.com" target="_blank" title="Visual Studio"><i class="devicon-visualstudio-plain"></i></a></div>
-                    <div class="item"><a href="https://git-scm.com" target="_blank" title="git"><i class="fab fa-git-alt"></i></a></div>
-                    <div class="item"><a href="https://www.sqlite.org" target="_blank" title="SQLite"><i class="devicon-sqlite-plain"></i></a></div>
-                </div>
-                <div class="circle">
-                    <div class="item"><a href="https://html.spec.whatwg.org" target="_blank" title="HTML"><i class="fab fa-html5"></i></a></div>
-                    <div class="item"><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" title="JavaScript"><i class="fab fa-js-square"></i></a></div>
-                    <div class="item"><a href="https://www.python.org" target="_blank" title="Python"><i class="fab fa-python"></i></a></div>
-                    <div class="item"><a href="https://www.sql.org" target="_blank" title="SQL"><i class="fas fa-database"></i></a></div>
-                    <div class="item"><a href="https://www.php.net" target="_blank" title="PHP"><i class="fab fa-php"></i></a></div>
-                    <div class="item"><a href="https://learn.microsoft.com/en-us/dotnet/csharp/" target="_blank" title="C#"><i class="devicon-csharp-plain"></i></a></div>
-                </div>
-            </div>
-            
-            <h4>Proyectos de programacion</h4>
-            <div class="project">
-                <img src="ruta/imagen1.jpg" alt="app_cobro" />
-                <a href="https://github.com/Lautarocuesta/App-de-cobro" target="_blank">aplicacion de prueba para probar la api mercado pago</a>
-            </div>
-            <div class="project">
-                <img src="ruta/imagen2.jpg" alt="Proyecto 2" />
-                <a href="https://github.com/usuario/proyecto2" target="_blank">Proyecto API coc</a>
-            </div>
-            <div class="project">
-                <img src="ruta/imagen3.jpg" alt="Proyecto 3" />
-                <a href="https://github.com/usuario/proyecto3" target="_blank">Aula virtual</a>
-            </div>
-        </div>
+    <label><input type="checkbox" id="cbox3" value="lentes" /> lentes</label><br />
+
+    <label><input type="checkbox" id="cbox4" value="tanga" /> tanga</label><br />
+
+    <div class="popup" onclick="myFunction()">?
+        <span class="popuptext" id="myPopup">soy patricio gallo dillon y me gusta chupar verga</span>
     </div>
+    <script>
+        // When the user clicks on <div>, open the popup
+        function myFunction() {
+            var popup = document.getElementById("myPopup");
+            popup.classList.toggle("show");
+        }
+    </script>
 </body>
+
 </html>
