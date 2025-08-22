@@ -257,3 +257,34 @@ p {
   from {opacity: 0;}
   to {opacity:1 ;}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+.burbuja_home{
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    padding: 1%;
+    border-radius: 10%;
+    background-color: #758aaf;
+}
+
+.titulo_burbuja_home{
+    padding: 1%;
+text-align: center;
+justify-content: center;
+    align-items: center;
+    border-radius: 1%
+
+
+}

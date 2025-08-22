@@ -16,11 +16,12 @@ db = SQLAlchemy(app)
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
+   # contraseña= db.Column(db.Char,nullable=False)
 
 
 @app.route("/")
 def home():
-    return render_template("index.html", titulo="seguro que estas seguro")
+    return render_template("home.html", titulo="seguro que estas seguro")
 
 if __name__ == "__main__":
     app.run(debug=True)
