@@ -23,7 +23,7 @@ class Usuario(db.Model):
 
 @app.route("/")
 def home():
-    return render_template("home.html", titulo="seguro que estas seguro")
+    return render_template("index.html", titulo="seguro que estas seguro")
 
 @app.route("/api/login", methods=["POST"])
 def login():
