@@ -32,13 +32,9 @@ const Login = ({ onLoginSuccess }) => {
 
   return (
    <div className='app-container'>
-    <h1 className="app-title">CONTROL DE</h1>
+    <h1 className="app-title">CONTROL DE EPP+</h1>
     <h2 className="app-subtitle">La app que cuida a tu equipo</h2>
-    <h3 className="app-description">
-      En el trabajo, la seguridad no es opcional: es una prioridad. 
-      “Seguro que estás seguro” es una aplicación diseñada para ayudar a las empresas 
-      a verificar que sus empleados utilicen siempre los Elementos de Protección Personal (EPP) adecuados, 
-      de manera práctica y eficiente.   
+    <h3 className="app-description">En el trabajo, la seguridad no es opcional: es una prioridad. “Seguro que estás seguro” es una aplicación diseñada para ayudar a las empresas a verificar que sus empleados utilicen siempre los Elementos de Protección Personal (EPP) adecuados, de manera práctica y eficiente.   
     </h3>
     <p className="app-text">Con esta herramienta, supervisores y responsables de seguridad pueden:</p>
     <ul className="app-list">
