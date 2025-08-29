@@ -1,0 +1,95 @@
+/* Contenedor principal */
+.landing-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+/* Hero/banner */
+.hero {
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: black;
+  padding: 0 2rem;
+  background-image: url('../assets/equipo-de-seguridad-industrial-1.jpg'); /* ruta de tu imagen */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-top: 70px; /* espacio por navbar fija */
+}
+
+.app-title {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+}
+
+.app-subtitle {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+}
+
+.app-description {
+  font-size: 1.2rem;
+  max-width: 700px;
+  text-align: center;
+  line-height: 1.6;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+}
+
+/* Secciones */
+section {
+  padding: 4rem 2rem;
+}
+
+section h3 {
+  font-size: 2rem;
+  color: #1a73e8;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+section p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  max-width: 700px;
+  margin: 0 auto 2rem auto;
+  text-align: center;
+}
+
+section ul {
+  list-style: disc;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  max-width: 700px;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 2rem 0;
+  color: #777;
+  border-top: 1px solid #ddd;
+  margin-top: 3rem;
+}
+
+/* Contacto */
+.contacto p {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.app-title {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #1a73e8; /* celeste */
+  text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+}
