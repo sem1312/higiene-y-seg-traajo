@@ -4,7 +4,7 @@ import Landing from "./components/Landing";
 import Dashboard from "./components/Dashboard";
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(localStorage.getItem("auth") === "true");
 
   return (
     <Router>
