@@ -15,10 +15,25 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app, engine_options={"pool_pre_ping": True})
 
 # Modelo de usuario
-class Usuario(db.Model):
+class jefe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
     contrasena = db.Column(db.String(100), nullable=False)
+    compania = db.column(db.String(100))
+class trabajador(db.model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), nullable=False)
+    contrasena = db.Column(db.String(100), nullable=False)
+    jefe_id = db.Column(db.Integer, db.ForeignKey('jefe.id'), nullable=False)
+    #EPP_traqbajador
+    guantes = db.Column(db.Boolean, default=False)
+    casco = db.Column(db.Boolean, default=False)
+    botas = db.Column(db.Boolean, default=False)
+    lentes = db.Column(db.Boolean, default=False)
+    botas = db.Column(db.Boolean, default=False)
+    zapatos_seg = db.Column(db.Boolean, default=False)
+
+
 
 # Ruta de prueba para backend funcionando
 @app.route("/")
