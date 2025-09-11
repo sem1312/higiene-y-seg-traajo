@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
 # Configuración de la base de datos
-db_uri = 'mysql+pymysql://u31s95e6mllvngxm:N9Ca1ot2FkezF82duBRM@bhtttaanhzhkagixcuvw-mysql.services.clever-cloud.com:3306/bhtttaanhzhkagixcuvw'
+db_uri = 'mysql://utfxb8yfm6hg7f5y:jtYhujcBMjjeGMazzeje@bwr9tu5tsramopzducvt-mysql.services.clever-cloud.com:3306/bwr9tu5tsramopzducvt'
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -19,18 +19,19 @@ class jefe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
     contrasena = db.Column(db.String(100), nullable=False)
-    compania = db.column(db.String(100))
-class trabajador(db.model):
+    compania = db.Column(db.String(100), nullable=True)
+
+# Modelo de trabajador
+class trabajador(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
     contrasena = db.Column(db.String(100), nullable=False)
     jefe_id = db.Column(db.Integer, db.ForeignKey('jefe.id'), nullable=False)
-    #EPP_traqbajador
+    # EPP trabajador
     guantes = db.Column(db.Boolean, default=False)
     casco = db.Column(db.Boolean, default=False)
     botas = db.Column(db.Boolean, default=False)
     lentes = db.Column(db.Boolean, default=False)
-    botas = db.Column(db.Boolean, default=False)
     zapatos_seg = db.Column(db.Boolean, default=False)
 
 
@@ -60,8 +61,10 @@ def login():
 # Crear usuario de prueba al arrancar
 if __name__ == "__main__":
     with app.app_context():
-        if not Usuario.query.filter_by(nombre="admin").first():
-            nuevo_usuario = Usuario(nombre="admin", contrasena="admin")
+        db.create_all()
+        if not jefe.query.filter_by(nombre="admin").first():
+            nuevo_usuario = jefe(nombre="admin", contrasena="admin")
             db.session.add(nuevo_usuario)
             db.session.commit()
     app.run(debug=True, port=5000)
+
