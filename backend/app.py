@@ -70,6 +70,25 @@ def get_trabajadores():
     } for t in trabajadores_db]
     return jsonify(lista)
 
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    nombre = data.get("nombre")
+    contrasena = data.get("contrasena")
+
+    if not nombre or not contrasena:
+        return jsonify({"success": False, "message": "Faltan datos"}), 400
+
+    # Buscar el jefe con ese nombre
+    user = jefe.query.filter_by(nombre=nombre).first()
+
+    # En este ejemplo las contraseñas están en texto plano
+    if user and user.contrasena == contrasena:
+        return jsonify({"success": True, "message": "Login correcto"})
+    else:
+        return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"}), 401
+
+
 @app.route("/api/trabajadores", methods=["POST"])
 def crear_trabajador():
     data = request.get_json()

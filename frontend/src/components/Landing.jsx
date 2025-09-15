@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";   // ✅ Import para el botón
 import Navbar from "./Navbar";
 import LoginModal from "./LoginModal";
 import "../styles/Landing.css";
@@ -18,6 +19,13 @@ const Landing = ({ onLoginSuccess }) => {
         <p className="app-description">
           Sistema de gestión y control de elementos de protección personal.
         </p>
+
+        {/* ✅ Si el usuario ya inició sesión, mostrar botón para ir al Dashboard */}
+        {localStorage.getItem("auth") === "true" && (
+          <Link to="/dashboard" className="dashboard-btn">
+            Ir al Dashboard
+          </Link>
+        )}
       </section>
 
       {/* Beneficios / secciones */}
