@@ -19,17 +19,16 @@ const LoginModal = ({ show, onClose, onLoginSuccess }) => {
         body: JSON.stringify({ nombre, contrasena }),
       });
 
-      // siempre parseamos JSON aunque sea 401
       const data = await response.json();
 
       if (data.success) {
-        // login exitoso
         localStorage.setItem("auth", "true");
+        localStorage.setItem("jefe_id", data.jefe_id);
+        localStorage.setItem("compania_id", data.compania_id); // nuevo
         if (onLoginSuccess) onLoginSuccess();
         onClose();
         navigate("/dashboard");
       } else {
-        // credenciales incorrectas
         setError(data.message || "Usuario o contraseña incorrectos");
       }
     } catch (err) {

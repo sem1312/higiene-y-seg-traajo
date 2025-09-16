@@ -1,15 +1,23 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "./Navbar";
+import AddWorkerModal from "./AddTrabajadorModal"; // nuevo modal
 
 function Dashboard() {
   const [trabajadores, setTrabajadores] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // <-- estado de búsqueda
+
+  const jefe_id = localStorage.getItem("jefe_id");
+  const compania_id = localStorage.getItem("compania_id");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/trabajadores")
+    if (!jefe_id) return;
+
+    fetch(`http://localhost:5000/api/trabajadores?jefe_id=${jefe_id}`)
       .then(res => res.json())
       .then(data => setTrabajadores(data))
       .catch(err => console.error(err));
-  }, []);
+  }, [jefe_id]);
 
   const handleChange = (id, field, value) => {
     fetch(`http://localhost:5000/api/trabajadores/${id}`, {
@@ -26,25 +34,8 @@ function Dashboard() {
       .catch(err => console.error(err));
   };
 
-  const agregarTrabajador = () => {
-    const nombre = prompt("Ingrese el nombre del nuevo trabajador:");
-    if (!nombre) return;
-
-    fetch("http://localhost:5000/api/trabajadores", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre }),
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setTrabajadores(prev => [...prev, data.trabajador]);
-      })
-      .catch(err => console.error(err));
-  };
-
-  const eliminarTrabajador = id => {
-    const confirmDelete = window.confirm("¿Desea eliminar este trabajador?");
-    if (!confirmDelete) return;
+  const handleDelete = (id) => {
+    if (!window.confirm("¿Desea eliminar este trabajador?")) return;
 
     fetch(`http://localhost:5000/api/trabajadores/${id}`, { method: "DELETE" })
       .then(res => res.json())
@@ -54,13 +45,36 @@ function Dashboard() {
       .catch(err => console.error(err));
   };
 
+  // Filtrado en tiempo real
+  const filteredTrabajadores = trabajadores.filter(t =>
+    t.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div>
       <Navbar />
       <div style={{ padding: "20px" }}>
         <h1>Trabajadores</h1>
+
+        {/* Barra de búsqueda */}
+        <input
+          type="text"
+          placeholder="Buscar trabajador..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          style={{
+            padding: "8px 12px",
+            marginBottom: "20px",
+            width: "100%",
+            maxWidth: "400px",
+            fontSize: "16px",
+            borderRadius: "4px",
+            border: "1px solid #ccc"
+          }}
+        />
+
         <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
-          {trabajadores.map(t => (
+          {filteredTrabajadores.map(t => (
             <div key={t.id} style={{
               border: "1px solid #ccc",
               borderRadius: "8px",
@@ -82,7 +96,7 @@ function Dashboard() {
                 </div>
               ))}
 
-              <button onClick={() => eliminarTrabajador(t.id)} style={{
+              <button onClick={() => handleDelete(t.id)} style={{
                 position: "absolute",
                 top: "5px",
                 right: "5px",
@@ -91,12 +105,13 @@ function Dashboard() {
                 border: "none",
                 borderRadius: "4px",
                 cursor: "pointer",
-                padding: "2px 6px",
+                padding: "2px 6px"
               }}>X</button>
             </div>
           ))}
 
-          <div onClick={agregarTrabajador} style={{
+          {/* Botón para agregar trabajador */}
+          <div onClick={() => setShowAddModal(true)} style={{
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
@@ -110,6 +125,15 @@ function Dashboard() {
           }}>+</div>
         </div>
       </div>
+
+      {/* Modal para agregar trabajador */}
+      <AddWorkerModal
+        show={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        jefe_id={jefe_id}
+        compania_id={compania_id}
+        onAdded={(nuevo) => setTrabajadores(prev => [...prev, nuevo])}
+      />
     </div>
   );
 }

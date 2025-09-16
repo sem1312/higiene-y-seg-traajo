@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom"; // import useLocation
+import { Link, useLocation } from "react-router-dom";
 import "../styles/Navbar.css";
 import logo from "../assets/logo.png";
 import LoginModal from "./LoginModal";
+import RegisterModal from "./RegisterModal";
 
 const Navbar = () => {
   const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [isLogged, setIsLogged] = useState(false);
+  const location = useLocation();
 
-  const location = useLocation(); // obtener la ruta actual
-
-  // Chequear estado de login al montar y cuando cambie localStorage
   useEffect(() => {
     const checkAuth = () => setIsLogged(localStorage.getItem("auth") === "true");
     checkAuth();
-
     window.addEventListener("storage", checkAuth);
     return () => window.removeEventListener("storage", checkAuth);
   }, []);
@@ -28,8 +27,7 @@ const Navbar = () => {
     }
   };
 
-  // Si estamos en /dashboard, mostramos solo un botón al Landing con el mismo estilo
-  if (location.pathname === "/dashboard") {
+  if (location.pathname === "/dashboard" || location.pathname === "/epp") {
     return (
       <nav className="navbar">
         <div className="navbar-logo">
@@ -39,17 +37,38 @@ const Navbar = () => {
         </div>
 
         <ul className="navbar-links" style={{ paddingRight: "50px" }}>
-          <li>
-            <Link to="/" className="navbar-login">
-              Volver al Landing
-            </Link>
-          </li>
+          {isLogged && (
+            <>
+              <li>
+                <Link to="/dashboard" className="navbar-login">Dashboard</Link>
+              </li>
+              <li>
+                <Link to="/epp" className="navbar-login">EPP</Link>
+              </li>
+              <li>
+                <button
+                  className="navbar-login"
+                  onClick={() => {
+                    localStorage.removeItem("auth");
+                    localStorage.removeItem("jefe_id");
+                    setIsLogged(false);
+                  }}
+                >
+                  Cerrar sesión
+                </button>
+              </li>
+            </>
+          )}
+          {!isLogged && (
+            <li>
+              <Link to="/" className="navbar-login">Volver al Landing</Link>
+            </li>
+          )}
         </ul>
       </nav>
     );
   }
 
-  // Navbar normal para otras rutas
   return (
     <>
       <nav className="navbar">
@@ -73,16 +92,19 @@ const Navbar = () => {
             <a href="#contacto" onClick={(e) => handleScroll(e, "contacto")}>Contacto</a>
           </li>
 
-          {/* Solo mostramos si NO está logeado */}
           {!isLogged && (
-            <li>
-              <button
-                className="navbar-login"
-                onClick={() => setShowLogin(true)}
-              >
-                Iniciar sesión
-              </button>
-            </li>
+            <>
+              <li>
+                <button className="navbar-login" onClick={() => setShowLogin(true)}>
+                  Iniciar sesión
+                </button>
+              </li>
+              <li>
+                <button className="navbar-login" onClick={() => setShowRegister(true)}>
+                  Registrar jefe
+                </button>
+              </li>
+            </>
           )}
         </ul>
       </nav>
@@ -91,6 +113,10 @@ const Navbar = () => {
         show={showLogin}
         onClose={() => setShowLogin(false)}
         onLoginSuccess={() => setIsLogged(true)}
+      />
+      <RegisterModal
+        show={showRegister}
+        onClose={() => setShowRegister(false)}
       />
     </>
   );
