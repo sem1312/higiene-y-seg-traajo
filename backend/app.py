@@ -111,7 +111,7 @@ def crear_trabajador():
     if not nombre or not jefe_id:
         return jsonify({"success": False, "message": "Faltan datos"}), 400
 
-    jefe = Jefe.session.get(jefe_id)
+    jefe = db.session.get(Jefe, jefe_id)
     if not jefe:
         return jsonify({"success": False, "message": "Jefe no encontrado"}), 404
 
@@ -145,38 +145,16 @@ def eliminar_trabajador(id):
     return jsonify({"success": True})
 
 # ----------------- EPP -----------------
-@app.route("/api/epps", methods=["GET"])
-def get_epps():
-    compania_id = request.args.get("compania_id")
-    if not compania_id:
-        return jsonify([])
-
-    try:
-        compania_id = int(compania_id)
-    except ValueError:
-        return jsonify([])
-
-    epps = EPP.query.filter_by(compania_id=compania_id).all()
-    lista = []
-    for e in epps:
-        stock = EPPItem.query.filter_by(epp_id=e.id, disponible=True).count()
-        lista.append({
-            "id": e.id,
-            "nombre": e.nombre,
-            "tipo": e.tipo,
-            "fecha_de_compra": e.fecha_compra.isoformat() if e.fecha_compra else None,
-            "imagen_url": e.imagen_url,
-            "compania_id": e.compania_id,
-            "stock": stock
-        })
-    return jsonify(lista)
-
 @app.route("/api/epp", methods=["POST"])
 def crear_epp():
     tipo = request.form.get("tipo")
     nombre = request.form.get("nombre")
-    compania_id = request.form.get("compania_id")
+    compania_id = request.form.get("compania_id")  # <- recibimos compania_id ahora
     stock = request.form.get("stock", 1)
+
+    # Validación básica
+    if not tipo or not nombre or not compania_id:
+        return jsonify({"success": False, "message": "Faltan datos"}), 400
 
     try:
         compania_id = int(compania_id)
@@ -185,6 +163,11 @@ def crear_epp():
             stock = 1
     except (ValueError, TypeError):
         return jsonify({"success": False, "message": "compania_id o stock inválido"}), 400
+
+    # Verificar unicidad por compañía
+    existente = EPP.query.filter_by(compania_id=compania_id, nombre=nombre).first()
+    if existente:
+        return jsonify({"success": False, "message": "Ya existe un EPP con ese nombre para esta compañía"}), 400
 
     fecha_compra_str = request.form.get("fecha_compra")
     try:
@@ -200,6 +183,7 @@ def crear_epp():
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             imagen_url = f"uploads/{filename}"
 
+    # Crear EPP
     epp = EPP(
         tipo=tipo,
         nombre=nombre,
@@ -227,10 +211,18 @@ def crear_epp():
         "nombre": epp.nombre,
         "tipo": epp.tipo,
         "stock": stock,
-        "fecha_de_compra": epp.fecha_compra.isoformat() if epp.fecha_compra else None,
+        "fecha_de_compra": epp.fecha_compra.isoformat(),
         "imagen_url": epp.imagen_url,
         "compania_id": epp.compania_id
     })
+
+
+@app.route("/api/companias", methods=["GET"])
+def get_companias():
+    companias = Compania.query.all()
+    lista = [{"id": c.id, "nombre": c.nombre} for c in companias]
+    return jsonify(lista)
+
 
 # ----------------- ASIGNAR EPP -----------------
 @app.route("/api/asignar_epp", methods=["POST"])
@@ -292,7 +284,28 @@ def actualizar_epps_trabajador():
 
     return jsonify({"success": True, "message": "EPPs actualizados correctamente"})
 
+@app.route("/api/trabajador/<int:trabajador_id>/epps", methods=["GET"])
+def epps_trabajador(trabajador_id):
+    trabajador = Trabajador.query.get(trabajador_id)
+    if not trabajador:
+        return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
 
+    # Todos los EPPs existentes
+    todos = EPP.query.all()
+
+    # IDs de los EPPs que realmente tiene asignados este trabajador
+    asignados = {item.epp_id for item in trabajador.epps_items}
+
+    data = []
+    for epp in todos:
+        data.append({
+            "id": epp.id,
+            "nombre": epp.nombre,
+            "tipo": epp.tipo,          # 👈 agregado para que el frontend pueda mostrarlo
+            "asignado": epp.id in asignados
+        })
+
+    return jsonify(data)
 
 
 # ----------------- SERVIR IMAGENES -----------------
@@ -304,15 +317,19 @@ def uploaded_file(filename):
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        # Crear compañía y jefe admin si no existen
-        compania = Compania.query.filter_by(nombre="EmpresaX").first()
-        if not compania:
-            compania = Compania(nombre="EmpresaX")
-            db.session.add(compania)
+        # Crear compañía de ejemplo si no existe
+        renault = Compania.query.filter_by(nombre="Renault").first()
+        if not renault:
+            renault = Compania(nombre="Renault")
+            db.session.add(renault)
             db.session.commit()
+        
+        # Crear jefe admin si no existe
         admin = Jefe.query.filter_by(nombre="admin").first()
         if not admin:
-            admin = Jefe(nombre="admin", contrasena="admin", compania_id=compania.id)
+            admin = Jefe(nombre="admin", contrasena="admin", compania_id=renault.id)
             db.session.add(admin)
             db.session.commit()
+
     app.run(debug=True, port=5000)
+

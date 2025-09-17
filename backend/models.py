@@ -56,6 +56,7 @@ class EPP(db.Model):
 class EPPItem(db.Model):
     __tablename__ = "epp_item"
     id = db.Column(db.Integer, primary_key=True)
+    jefe_id = db.Column(db.Integer, db.ForeignKey("jefe.id"), nullable=False)
     epp_id = db.Column(db.Integer, db.ForeignKey("epp.id"), nullable=False)
     trabajador_id = db.Column(db.Integer, db.ForeignKey("trabajador.id"), nullable=True)
     disponible = db.Column(db.Boolean, default=True)

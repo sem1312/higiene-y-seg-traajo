@@ -4,6 +4,7 @@ import Landing from "./components/Landing";
 import Dashboard from "./components/Dashboard";
 import EditarEpps from "./components/EditarEpps";
 import AddEpp from "./components/AddEppModal";
+import RegisterPage from "./components/RegisterPage";
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(localStorage.getItem("auth") === "true");
@@ -22,6 +23,8 @@ function App() {
           path="/dashboard"
           element={loggedIn ? <Dashboard /> : <Navigate to="/" replace />}
         />
+
+        <Route path="/register" element={<RegisterPage />} />
 
         {/* Editar EPPs */}
         <Route

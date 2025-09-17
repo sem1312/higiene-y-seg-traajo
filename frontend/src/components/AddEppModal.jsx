@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
-function AddEpp({ compania_id }) {
+function AddEpp({ jefe_id }) {
   const [nombre, setNombre] = useState("");
   const [tipo, setTipo] = useState("Casco");
   const [fechaCompra, setFechaCompra] = useState("");
@@ -21,7 +21,7 @@ function AddEpp({ compania_id }) {
       const formData = new FormData();
       formData.append("nombre", nombre);
       formData.append("tipo", tipo);
-      formData.append("compania_id", Number(compania_id));
+      formData.append("jefe_id", Number(jefe_id)); // <- jefe_id
       formData.append("fecha_compra", fechaCompra);
       formData.append("stock", Number(stock));
       if (imagen) formData.append("imagen", imagen);

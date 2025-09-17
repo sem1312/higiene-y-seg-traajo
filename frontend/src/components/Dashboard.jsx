@@ -7,6 +7,7 @@ function Dashboard() {
   const [trabajadores, setTrabajadores] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedIds, setExpandedIds] = useState([]); // IDs de trabajadores expandidos
 
   const jefe_id = localStorage.getItem("jefe_id");
   const compania_id = localStorage.getItem("compania_id");
@@ -29,8 +30,16 @@ function Dashboard() {
       .catch(err => console.error(err));
   };
 
+  const toggleExpand = (id) => {
+    setExpandedIds(prev =>
+      prev.includes(id) ? prev.filter(eid => eid !== id) : [...prev, id]
+    );
+  };
+
   const filteredTrabajadores = trabajadores.filter(t =>
-    (t.nombre + " " + t.apellido).toLowerCase().includes(searchTerm.toLowerCase())
+    ((t?.nombre ?? "") + " " + (t?.apellido ?? ""))
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -56,57 +65,93 @@ function Dashboard() {
         />
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
-          {filteredTrabajadores.map(t => (
-            <div key={t.id} style={{
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              padding: "15px",
-              width: "240px",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px"
-            }}>
-              <h3>{t.nombre} {t.apellido}</h3>
-              <p><strong>DNI:</strong> {t.dni}</p>
-              <p><strong>Tel:</strong> {t.telefono}</p>
-              <p><strong>Email:</strong> {t.email}</p>
-              <p><strong>Dirección:</strong> {t.direccion}</p>
+          {filteredTrabajadores.map(t => {
+            const isExpanded = expandedIds.includes(t.id);
+            return (
+              <div key={t.id} style={{
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                padding: "15px",
+                width: "240px",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                transition: "all 0.3s"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h3>{t?.nombre ?? "Sin nombre"} {t?.apellido ?? ""}</h3>
+                  <button
+                    onClick={() => toggleExpand(t.id)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "18px"
+                    }}
+                  >
+                    {isExpanded ? "▲" : "▼"}
+                  </button>
+                </div>
 
-              <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
-                <Link
-                  to={`/editar-epps/${t.id}`}
-                  style={{
-                    background: "#1890ff",
-                    color: "#fff",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    padding: "4px 8px",
-                    flex: 1,
-                    textAlign: "center",
-                    textDecoration: "none"
-                  }}
-                >
-                  Editar EPPs
-                </Link>
+                {isExpanded && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <p><strong>DNI:</strong> {t?.dni ?? "-"}</p>
+                    <p><strong>Tel:</strong> {t?.telefono ?? "-"}</p>
+                    <p><strong>Email:</strong> {t?.email ?? "-"}</p>
+                    <p><strong>Dirección:</strong> {t?.direccion ?? "-"}</p>
+                    <Link
+                      to={`/editar-epps/${t?.id}`}
+                      style={{
+                        background: "#1890ff",
+                        color: "#fff",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        padding: "6px 10px",
+                        textAlign: "center",
+                        textDecoration: "none",
+                        marginTop: "8px"
+                      }}
+                    >
+                      Editar EPPs
+                    </Link>
+                  </div>
+                )}
+
+                {!isExpanded && (
+                  <button
+                    onClick={() => toggleExpand(t.id)}
+                    style={{
+                      background: "#eee",
+                      border: "1px solid #ccc",
+                      borderRadius: "4px",
+                      padding: "4px",
+                      cursor: "pointer",
+                      marginTop: "5px"
+                    }}
+                  >
+                    Mostrar más
+                  </button>
+                )}
 
                 <button
-                  onClick={() => handleDelete(t.id)}
+                  onClick={() => handleDelete(t?.id)}
                   style={{
                     background: "#ff4d4f",
                     color: "#fff",
                     borderRadius: "4px",
                     cursor: "pointer",
                     padding: "4px 8px",
-                    flex: 0.5
+                    marginTop: "5px"
                   }}
                 >
-                  X
+                  Eliminar
                 </button>
               </div>
-            </div>
-          ))}
+            )
+          })}
 
+          {/* Botón para agregar trabajador */}
           <div
             onClick={() => setShowAddModal(true)}
             style={{
