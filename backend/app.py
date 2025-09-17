@@ -66,7 +66,6 @@ def registrar_jefe():
     db.session.commit()
     return jsonify({"success": True, "jefe_id": jefe.id})
 
-# ----------------- CRUD TRABAJADORES -----------------
 @app.route("/api/trabajadores", methods=["GET"])
 def get_trabajadores():
     jefe_id = request.args.get("jefe_id", type=int)
@@ -78,6 +77,11 @@ def get_trabajadores():
         lista.append({
             "id": t.id,
             "nombre": t.nombre,
+            "apellido": t.apellido,
+            "telefono": t.telefono,
+            "direccion": t.direccion,
+            "dni": t.dni,
+            "email": t.email,
             "compania_id": t.compania_id,
             "epps_asignados": [
                 {
@@ -92,24 +96,48 @@ def get_trabajadores():
         })
     return jsonify(lista)
 
+
 @app.route("/api/trabajadores", methods=["POST"])
 def crear_trabajador():
     data = request.get_json()
     nombre = data.get("nombre")
+    apellido = data.get("apellido")
+    telefono = data.get("telefono")
+    direccion = data.get("direccion")
+    dni = data.get("dni")
+    email = data.get("email")
     jefe_id = data.get("jefe_id")
+
     if not nombre or not jefe_id:
         return jsonify({"success": False, "message": "Faltan datos"}), 400
-    jefe = Jefe.query.get(jefe_id)
+
+    jefe = Jefe.session.get(jefe_id)
     if not jefe:
         return jsonify({"success": False, "message": "Jefe no encontrado"}), 404
-    t = Trabajador(nombre=nombre, jefe_id=jefe_id, compania_id=jefe.compania_id)
+
+    t = Trabajador(
+        nombre=nombre,
+        apellido=apellido,
+        telefono=telefono,
+        direccion=direccion,
+        dni=dni,
+        email=email,
+        jefe_id=jefe_id,
+        compania_id=jefe.compania_id
+    )
     db.session.add(t)
     db.session.commit()
-    return jsonify({"success": True, "id": t.id, "nombre": t.nombre})
+    return jsonify({
+        "success": True,
+        "id": t.id,
+        "nombre": t.nombre,
+        "apellido": t.apellido
+    })
+
 
 @app.route("/api/trabajadores/<int:id>", methods=["DELETE"])
 def eliminar_trabajador(id):
-    t = Trabajador.query.get(id)
+    t = Trabajador.session.get(id)
     if not t:
         return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
     db.session.delete(t)
@@ -210,14 +238,62 @@ def asignar_epp():
     data = request.get_json()
     trabajador_id = data.get("trabajador_id")
     epp_id = data.get("epp_id")
+
     trabajador = Trabajador.query.get(trabajador_id)
-    item = EPPItem.query.filter_by(epp_id=epp_id, disponible=True).first()
-    if not trabajador or not item:
-        return jsonify({"success": False, "message": "Trabajador o EPP no encontrado"}), 404
-    item.disponible = False
-    item.trabajador_id = trabajador.id
+    if not trabajador:
+        return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
+
+    # Buscar si ya tiene este EPP asignado
+    item = EPPItem.query.filter_by(epp_id=epp_id, trabajador_id=trabajador_id).first()
+    if item:
+        # Desasignar
+        item.trabajador_id = None
+        item.disponible = True
+        action = "desasignado"
+    else:
+        # Asignar un item disponible
+        item = EPPItem.query.filter_by(epp_id=epp_id, disponible=True).first()
+        if not item:
+            return jsonify({"success": False, "message": "No hay stock disponible"}), 400
+        item.trabajador_id = trabajador_id
+        item.disponible = False
+        action = "asignado"
+
     db.session.commit()
-    return jsonify({"success": True, "message": f"EPP asignado a {trabajador.nombre}"})
+    return jsonify({"success": True, "message": f"EPP {action} correctamente"})
+
+# ----------------- ACTUALIZAR EPPs DEL TRABAJADOR -----------------
+@app.route("/api/actualizar_epps_trabajador", methods=["POST"])
+def actualizar_epps_trabajador():
+    data = request.get_json()
+    trabajador_id = data.get("trabajador_id")
+    epp_ids = data.get("epp_ids", [])
+
+    trabajador = Trabajador.query.get(trabajador_id)
+    if not trabajador:
+        return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
+
+    # Liberar todos los EPPItems asignados previamente
+    for item in trabajador.epps_items:
+        item.disponible = True
+        item.trabajador_id = None
+
+    db.session.commit()
+
+    # Asignar los nuevos EPPs
+    for epp_id in epp_ids:
+        item = EPPItem.query.filter_by(epp_id=epp_id, disponible=True).first()
+        if item:
+            item.disponible = False
+            item.trabajador_id = trabajador.id
+            db.session.add(item)
+
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "EPPs actualizados correctamente"})
+
+
+
 
 # ----------------- SERVIR IMAGENES -----------------
 @app.route("/uploads/<path:filename>")

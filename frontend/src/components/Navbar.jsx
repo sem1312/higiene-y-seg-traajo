@@ -27,8 +27,14 @@ const Navbar = () => {
     }
   };
 
-  // ✅ Ajuste aquí: incluimos /dashboardepp
-  if (location.pathname === "/dashboard" || location.pathname === "/dashboardepp") {
+  const handleLogout = () => {
+    localStorage.removeItem("auth");
+    localStorage.removeItem("jefe_id");
+    setIsLogged(false);
+  };
+
+  // Navbar para rutas protegidas (dashboard)
+  if (location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/addepp")) {
     return (
       <nav className="navbar">
         <div className="navbar-logo">
@@ -44,17 +50,10 @@ const Navbar = () => {
                 <Link to="/dashboard" className="navbar-login">Dashboard</Link>
               </li>
               <li>
-                <Link to="/dashboardepp" className="navbar-login">EPP</Link>
+                <Link to="/addepp" className="navbar-login">EPP</Link>
               </li>
               <li>
-                <button
-                  className="navbar-login"
-                  onClick={() => {
-                    localStorage.removeItem("auth");
-                    localStorage.removeItem("jefe_id");
-                    setIsLogged(false);
-                  }}
-                >
+                <button className="navbar-login" onClick={handleLogout}>
                   Cerrar sesión
                 </button>
               </li>
@@ -70,6 +69,7 @@ const Navbar = () => {
     );
   }
 
+  // Navbar pública (landing)
   return (
     <>
       <nav className="navbar">
@@ -80,18 +80,10 @@ const Navbar = () => {
         </div>
 
         <ul className="navbar-links" style={{ paddingRight: "50px" }}>
-          <li>
-            <a href="#hero" onClick={(e) => handleScroll(e, "hero")}>Inicio</a>
-          </li>
-          <li>
-            <a href="#sobre" onClick={(e) => handleScroll(e, "sobre")}>Sobre la app</a>
-          </li>
-          <li>
-            <a href="#beneficios" onClick={(e) => handleScroll(e, "beneficios")}>Beneficios</a>
-          </li>
-          <li>
-            <a href="#contacto" onClick={(e) => handleScroll(e, "contacto")}>Contacto</a>
-          </li>
+          <li><a href="#hero" onClick={(e) => handleScroll(e, "hero")}>Inicio</a></li>
+          <li><a href="#sobre" onClick={(e) => handleScroll(e, "sobre")}>Sobre la app</a></li>
+          <li><a href="#beneficios" onClick={(e) => handleScroll(e, "beneficios")}>Beneficios</a></li>
+          <li><a href="#contacto" onClick={(e) => handleScroll(e, "contacto")}>Contacto</a></li>
 
           {!isLogged && (
             <>
