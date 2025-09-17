@@ -4,7 +4,8 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
   const [nombre, setNombre] = useState("");
   const [tipo, setTipo] = useState("Casco");
   const [fechaCompra, setFechaCompra] = useState("");
-  const [fechaVenc, setFechaVenc] = useState("");
+  const [stock, setStock] = useState(1);
+  const [imagen, setImagen] = useState(null);
   const [error, setError] = useState("");
 
   if (!show) return null;
@@ -13,35 +14,34 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
     e.preventDefault();
     setError("");
 
-    // Validación mínima de fechas
-    if (fechaCompra && fechaVenc && new Date(fechaVenc) < new Date(fechaCompra)) {
-      return setError("La fecha de vencimiento no puede ser anterior a la fecha de compra");
+    if (!nombre || !tipo || !fechaCompra || stock < 1) {
+      return setError("Por favor completa todos los campos obligatorios correctamente");
     }
 
     try {
-      const body = {
-        nombre,
-        tipo,
-        compania_id,
-        fecha_compra: fechaCompra,
-        fecha_vencimiento: fechaVenc,
-      };
+      const formData = new FormData();
+      formData.append("nombre", nombre);
+      formData.append("tipo", tipo);
+      formData.append("compania_id", Number(compania_id)); // 🔹 convertir a número
+      formData.append("fecha_compra", fechaCompra);
+      formData.append("stock", Number(stock)); // 🔹 convertir a número
+      if (imagen) formData.append("imagen", imagen);
 
       const res = await fetch("http://localhost:5000/api/epp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: formData,
       });
 
       const data = await res.json();
 
       if (data.success) {
-        onAdded(data); // devuelve info del EPP creado
+        onAdded(data);
         onClose();
         setNombre("");
         setTipo("Casco");
         setFechaCompra("");
-        setFechaVenc("");
+        setStock(1);
+        setImagen(null);
       } else {
         setError(data.message || "Error al agregar el EPP");
       }
@@ -62,21 +62,18 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
       <div style={{
         background: "#fff",
         borderRadius: "8px",
-        padding: "20px",
-        width: "400px",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.2)"
+        padding: "25px",
+        width: "420px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "15px"
       }}>
-        <h2>Agregar EPP</h2>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <input
-            type="text"
-            placeholder="Nombre del EPP"
-            value={nombre}
-            onChange={e => setNombre(e.target.value)}
-            required
-          />
+        <h2 style={{ textAlign: "center", marginBottom: "10px" }}>Agregar EPP</h2>
 
-          <select value={tipo} onChange={e => setTipo(e.target.value)}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <label>Categoria:</label>
+          <select value={tipo} onChange={e => setTipo(e.target.value)} required>
             <option value="Casco">Casco</option>
             <option value="Guantes">Guantes</option>
             <option value="Lentes">Lentes</option>
@@ -87,29 +84,23 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
             <option value="Calzado de Seguridad">Calzado de Seguridad</option>
           </select>
 
+          <label>Nombre del EPP:</label>
+          <input type="text" placeholder="Ej: Casco Industrial" value={nombre} onChange={e => setNombre(e.target.value)} required />
+
           <label>Fecha de Compra:</label>
-          <input
-            type="date"
-            value={fechaCompra}
-            onChange={e => setFechaCompra(e.target.value)}
-            required
-          />
+          <input type="date" value={fechaCompra} onChange={e => setFechaCompra(e.target.value)} required />
 
-          <label>Fecha de Vencimiento:</label>
-          <input
-            type="date"
-            value={fechaVenc}
-            onChange={e => setFechaVenc(e.target.value)}
-            required
-          />
+          <label>Stock:</label>
+          <input type="number" min={1} value={stock} onChange={e => setStock(e.target.value)} required />
 
-          {error && <p style={{ color: "red" }}>{error}</p>}
+          <label>Imagen (opcional):</label>
+          <input type="file" accept="image/*" onChange={e => setImagen(e.target.files[0])} />
+
+          {error && <p style={{ color: "red", fontWeight: "bold" }}>{error}</p>}
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
             <button type="button" onClick={onClose}>Cancelar</button>
-            <button type="submit" style={{ background: "#4CAF50", color: "#fff", border: "none", padding: "8px 12px", borderRadius: "4px" }}>
-              Agregar
-            </button>
+            <button type="submit">Agregar</button>
           </div>
         </form>
       </div>

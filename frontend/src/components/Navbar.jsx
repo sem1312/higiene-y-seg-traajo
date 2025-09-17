@@ -27,7 +27,8 @@ const Navbar = () => {
     }
   };
 
-  if (location.pathname === "/dashboard" || location.pathname === "/epp") {
+  // ✅ Ajuste aquí: incluimos /dashboardepp
+  if (location.pathname === "/dashboard" || location.pathname === "/dashboardepp") {
     return (
       <nav className="navbar">
         <div className="navbar-logo">
@@ -43,7 +44,7 @@ const Navbar = () => {
                 <Link to="/dashboard" className="navbar-login">Dashboard</Link>
               </li>
               <li>
-                <Link to="/epp" className="navbar-login">EPP</Link>
+                <Link to="/dashboardepp" className="navbar-login">EPP</Link>
               </li>
               <li>
                 <button

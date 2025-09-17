@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from models import db, Compania, Jefe, Trabajador, EPP, EPPItem
-from datetime import date
+from datetime import date, datetime
 from werkzeug.utils import secure_filename
 import os
 
@@ -12,7 +12,6 @@ CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mi_base_local.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Carpeta para imágenes
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -123,16 +122,24 @@ def get_epps():
     compania_id = request.args.get("compania_id")
     if not compania_id:
         return jsonify([])
+
+    try:
+        compania_id = int(compania_id)
+    except ValueError:
+        return jsonify([])
+
     epps = EPP.query.filter_by(compania_id=compania_id).all()
     lista = []
     for e in epps:
+        stock = EPPItem.query.filter_by(epp_id=e.id, disponible=True).count()
         lista.append({
             "id": e.id,
             "nombre": e.nombre,
             "tipo": e.tipo,
-            "fecha_de_compra": e.fecha_compra.isoformat(),
-            "fecha_de_venc": e.fecha_vencimiento.isoformat() if e.fecha_vencimiento else None,
-            "imagen_url": e.imagen_url
+            "fecha_de_compra": e.fecha_compra.isoformat() if e.fecha_compra else None,
+            "imagen_url": e.imagen_url,
+            "compania_id": e.compania_id,
+            "stock": stock
         })
     return jsonify(lista)
 
@@ -141,11 +148,21 @@ def crear_epp():
     tipo = request.form.get("tipo")
     nombre = request.form.get("nombre")
     compania_id = request.form.get("compania_id")
-    fecha_compra = request.form.get("fecha_compra", str(date.today()))
-    fecha_venc = request.form.get("fecha_vencimiento")
+    stock = request.form.get("stock", 1)
 
-    if not tipo or not nombre or not compania_id:
-        return jsonify({"success": False, "message": "Faltan datos"}), 400
+    try:
+        compania_id = int(compania_id)
+        stock = int(stock)
+        if stock < 1:
+            stock = 1
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "compania_id o stock inválido"}), 400
+
+    fecha_compra_str = request.form.get("fecha_compra")
+    try:
+        fecha_compra = datetime.strptime(fecha_compra_str, "%Y-%m-%d").date() if fecha_compra_str else date.today()
+    except ValueError:
+        return jsonify({"success": False, "message": "Formato de fecha inválido"}), 400
 
     imagen_url = None
     if "imagen" in request.files:
@@ -155,11 +172,37 @@ def crear_epp():
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             imagen_url = f"uploads/{filename}"
 
-    epp = EPP(tipo=tipo, nombre=nombre, compania_id=compania_id,
-              fecha_compra=fecha_compra, fecha_vencimiento=fecha_venc, imagen_url=imagen_url)
+    epp = EPP(
+        tipo=tipo,
+        nombre=nombre,
+        compania_id=compania_id,
+        fecha_compra=fecha_compra,
+        fecha_vencimiento=None,
+        imagen_url=imagen_url
+    )
     db.session.add(epp)
     db.session.commit()
-    return jsonify({"success": True, "id": epp.id, "imagen_url": imagen_url})
+
+    # Crear EPPItems según stock
+    for _ in range(stock):
+        item = EPPItem(
+            epp_id=epp.id,
+            disponible=True,
+            fecha_compra=fecha_compra
+        )
+        db.session.add(item)
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "id": epp.id,
+        "nombre": epp.nombre,
+        "tipo": epp.tipo,
+        "stock": stock,
+        "fecha_de_compra": epp.fecha_compra.isoformat() if epp.fecha_compra else None,
+        "imagen_url": epp.imagen_url,
+        "compania_id": epp.compania_id
+    })
 
 # ----------------- ASIGNAR EPP -----------------
 @app.route("/api/asignar_epp", methods=["POST"])

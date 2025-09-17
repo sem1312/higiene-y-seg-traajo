@@ -25,8 +25,6 @@ class Trabajador(db.Model):
     __tablename__ = "trabajador"
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
-   
-
     jefe_id = db.Column(db.Integer, db.ForeignKey("jefe.id"), nullable=False)
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
 
@@ -40,7 +38,7 @@ class EPP(db.Model):
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
 
     fecha_compra = db.Column(db.Date, nullable=False, default=date.today)
-    fecha_vencimiento = db.Column(db.Date, nullable=True)
+    fecha_vencimiento = db.Column(db.Date, nullable=True)  # No la usamos aquí
 
     imagen_url = db.Column(db.String(255), nullable=True)
 
@@ -50,7 +48,6 @@ class EPPItem(db.Model):
     __tablename__ = "epp_item"
     id = db.Column(db.Integer, primary_key=True)
     epp_id = db.Column(db.Integer, db.ForeignKey("epp.id"), nullable=False)
-
     trabajador_id = db.Column(db.Integer, db.ForeignKey("trabajador.id"), nullable=True)
     disponible = db.Column(db.Boolean, default=True)
     fecha_compra = db.Column(db.Date, nullable=False, default=date.today)

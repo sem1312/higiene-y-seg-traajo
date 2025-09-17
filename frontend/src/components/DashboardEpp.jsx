@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import AddEppModal from "./AddEppModal";
 
-function Epp() {
+function DashboardEpp() {
   const [epps, setEpps] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
 
   const compania_id = localStorage.getItem("compania_id");
 
+  // ✅ Cargar EPPs existentes al iniciar
   useEffect(() => {
     if (!compania_id) return;
 
@@ -17,7 +18,7 @@ function Epp() {
       .catch(err => console.error(err));
   }, [compania_id]);
 
-  // Agrupar EPPs por tipo
+  // Agrupar por tipo
   const categorias = epps.reduce((acc, epp) => {
     if (!acc[epp.tipo]) acc[epp.tipo] = [];
     acc[epp.tipo].push(epp);
@@ -26,13 +27,11 @@ function Epp() {
 
   return (
     <div>
-      {/* ✅ Navbar incluida */}
       <Navbar />
 
       <div style={{ padding: "20px" }}>
         <h1>Elementos de Protección Personal</h1>
 
-        {/* Botón para agregar */}
         <button
           onClick={() => setShowAddModal(true)}
           style={{
@@ -48,7 +47,8 @@ function Epp() {
           + Agregar EPP
         </button>
 
-        {/* Render categorías */}
+        {Object.keys(categorias).length === 0 && <p>No hay EPP registrados.</p>}
+
         {Object.keys(categorias).map(cat => (
           <div key={cat} style={{ marginBottom: "30px" }}>
             <h2>{cat}</h2>
@@ -74,8 +74,19 @@ function Epp() {
                     />
                   )}
                   <h3>{epp.nombre}</h3>
-                  <p><strong>Compra:</strong> {new Date(epp.fecha_de_compra).toLocaleDateString()}</p>
-                  <p><strong>Vence:</strong> {new Date(epp.fecha_de_venc).toLocaleDateString()}</p>
+
+                  {/* Mostrar stock si existe */}
+                  {epp.stock !== undefined && (
+                    <p><strong>Stock:</strong> {epp.stock}</p>
+                  )}
+
+                  {/* Fecha de compra */}
+                  <p>
+                    <strong>Compra:</strong>{" "}
+                    {epp.fecha_de_compra
+                      ? new Date(epp.fecha_de_compra).toLocaleDateString()
+                      : "N/A"}
+                  </p>
                 </div>
               ))}
             </div>
@@ -88,10 +99,24 @@ function Epp() {
         show={showAddModal}
         onClose={() => setShowAddModal(false)}
         compania_id={compania_id}
-        onAdded={(nuevo) => setEpps(prev => [...prev, nuevo])}
+        onAdded={(nuevo) => {
+          // Aseguramos estructura igual al backend
+          setEpps(prev => [
+            ...prev,
+            {
+              id: nuevo.id,
+              nombre: nuevo.nombre,
+              tipo: nuevo.tipo,
+              stock: nuevo.stock || 1, // default 1 si no viene
+              fecha_de_compra: nuevo.fecha_de_compra,
+              imagen_url: nuevo.imagen_url,
+              compania_id: nuevo.compania_id
+            }
+          ]);
+        }}
       />
     </div>
   );
 }
 
-export default Epp;
+export default DashboardEpp;
