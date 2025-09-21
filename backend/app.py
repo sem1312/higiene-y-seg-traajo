@@ -66,6 +66,7 @@ def registrar_jefe():
     db.session.commit()
     return jsonify({"success": True, "jefe_id": jefe.id})
 
+# ----------------- CRUD TRABAJADORES -----------------
 @app.route("/api/trabajadores", methods=["GET"])
 def get_trabajadores():
     jefe_id = request.args.get("jefe_id", type=int)
@@ -77,11 +78,6 @@ def get_trabajadores():
         lista.append({
             "id": t.id,
             "nombre": t.nombre,
-            "apellido": t.apellido,
-            "telefono": t.telefono,
-            "direccion": t.direccion,
-            "dni": t.dni,
-            "email": t.email,
             "compania_id": t.compania_id,
             "epps_asignados": [
                 {
@@ -96,48 +92,24 @@ def get_trabajadores():
         })
     return jsonify(lista)
 
-
 @app.route("/api/trabajadores", methods=["POST"])
 def crear_trabajador():
     data = request.get_json()
     nombre = data.get("nombre")
-    apellido = data.get("apellido")
-    telefono = data.get("telefono")
-    direccion = data.get("direccion")
-    dni = data.get("dni")
-    email = data.get("email")
     jefe_id = data.get("jefe_id")
-
     if not nombre or not jefe_id:
         return jsonify({"success": False, "message": "Faltan datos"}), 400
-
-    jefe = db.session.get(Jefe, jefe_id)
+    jefe = Jefe.query.get(jefe_id)
     if not jefe:
         return jsonify({"success": False, "message": "Jefe no encontrado"}), 404
-
-    t = Trabajador(
-        nombre=nombre,
-        apellido=apellido,
-        telefono=telefono,
-        direccion=direccion,
-        dni=dni,
-        email=email,
-        jefe_id=jefe_id,
-        compania_id=jefe.compania_id
-    )
+    t = Trabajador(nombre=nombre, jefe_id=jefe_id, compania_id=jefe.compania_id)
     db.session.add(t)
     db.session.commit()
-    return jsonify({
-        "success": True,
-        "id": t.id,
-        "nombre": t.nombre,
-        "apellido": t.apellido
-    })
-
+    return jsonify({"success": True, "id": t.id, "nombre": t.nombre})
 
 @app.route("/api/trabajadores/<int:id>", methods=["DELETE"])
 def eliminar_trabajador(id):
-    t = Trabajador.session.get(id)
+    t = Trabajador.query.get(id)
     if not t:
         return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
     db.session.delete(t)
@@ -145,16 +117,38 @@ def eliminar_trabajador(id):
     return jsonify({"success": True})
 
 # ----------------- EPP -----------------
+@app.route("/api/epps", methods=["GET"])
+def get_epps():
+    compania_id = request.args.get("compania_id")
+    if not compania_id:
+        return jsonify([])
+
+    try:
+        compania_id = int(compania_id)
+    except ValueError:
+        return jsonify([])
+
+    epps = EPP.query.filter_by(compania_id=compania_id).all()
+    lista = []
+    for e in epps:
+        stock = EPPItem.query.filter_by(epp_id=e.id, disponible=True).count()
+        lista.append({
+            "id": e.id,
+            "nombre": e.nombre,
+            "tipo": e.tipo,
+            "fecha_de_compra": e.fecha_compra.isoformat() if e.fecha_compra else None,
+            "imagen_url": e.imagen_url,
+            "compania_id": e.compania_id,
+            "stock": stock
+        })
+    return jsonify(lista)
+
 @app.route("/api/epp", methods=["POST"])
 def crear_epp():
     tipo = request.form.get("tipo")
     nombre = request.form.get("nombre")
-    compania_id = request.form.get("compania_id")  # <- recibimos compania_id ahora
+    compania_id = request.form.get("compania_id")
     stock = request.form.get("stock", 1)
-
-    # Validación básica
-    if not tipo or not nombre or not compania_id:
-        return jsonify({"success": False, "message": "Faltan datos"}), 400
 
     try:
         compania_id = int(compania_id)
@@ -163,11 +157,6 @@ def crear_epp():
             stock = 1
     except (ValueError, TypeError):
         return jsonify({"success": False, "message": "compania_id o stock inválido"}), 400
-
-    # Verificar unicidad por compañía
-    existente = EPP.query.filter_by(compania_id=compania_id, nombre=nombre).first()
-    if existente:
-        return jsonify({"success": False, "message": "Ya existe un EPP con ese nombre para esta compañía"}), 400
 
     fecha_compra_str = request.form.get("fecha_compra")
     try:
@@ -183,7 +172,6 @@ def crear_epp():
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             imagen_url = f"uploads/{filename}"
 
-    # Crear EPP
     epp = EPP(
         tipo=tipo,
         nombre=nombre,
@@ -211,18 +199,10 @@ def crear_epp():
         "nombre": epp.nombre,
         "tipo": epp.tipo,
         "stock": stock,
-        "fecha_de_compra": epp.fecha_compra.isoformat(),
+        "fecha_de_compra": epp.fecha_compra.isoformat() if epp.fecha_compra else None,
         "imagen_url": epp.imagen_url,
         "compania_id": epp.compania_id
     })
-
-
-@app.route("/api/companias", methods=["GET"])
-def get_companias():
-    companias = Compania.query.all()
-    lista = [{"id": c.id, "nombre": c.nombre} for c in companias]
-    return jsonify(lista)
-
 
 # ----------------- ASIGNAR EPP -----------------
 @app.route("/api/asignar_epp", methods=["POST"])
@@ -230,83 +210,14 @@ def asignar_epp():
     data = request.get_json()
     trabajador_id = data.get("trabajador_id")
     epp_id = data.get("epp_id")
-
     trabajador = Trabajador.query.get(trabajador_id)
-    if not trabajador:
-        return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
-
-    # Buscar si ya tiene este EPP asignado
-    item = EPPItem.query.filter_by(epp_id=epp_id, trabajador_id=trabajador_id).first()
-    if item:
-        # Desasignar
-        item.trabajador_id = None
-        item.disponible = True
-        action = "desasignado"
-    else:
-        # Asignar un item disponible
-        item = EPPItem.query.filter_by(epp_id=epp_id, disponible=True).first()
-        if not item:
-            return jsonify({"success": False, "message": "No hay stock disponible"}), 400
-        item.trabajador_id = trabajador_id
-        item.disponible = False
-        action = "asignado"
-
+    item = EPPItem.query.filter_by(epp_id=epp_id, disponible=True).first()
+    if not trabajador or not item:
+        return jsonify({"success": False, "message": "Trabajador o EPP no encontrado"}), 404
+    item.disponible = False
+    item.trabajador_id = trabajador.id
     db.session.commit()
-    return jsonify({"success": True, "message": f"EPP {action} correctamente"})
-
-# ----------------- ACTUALIZAR EPPs DEL TRABAJADOR -----------------
-@app.route("/api/actualizar_epps_trabajador", methods=["POST"])
-def actualizar_epps_trabajador():
-    data = request.get_json()
-    trabajador_id = data.get("trabajador_id")
-    epp_ids = data.get("epp_ids", [])
-
-    trabajador = Trabajador.query.get(trabajador_id)
-    if not trabajador:
-        return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
-
-    # Liberar todos los EPPItems asignados previamente
-    for item in trabajador.epps_items:
-        item.disponible = True
-        item.trabajador_id = None
-
-    db.session.commit()
-
-    # Asignar los nuevos EPPs
-    for epp_id in epp_ids:
-        item = EPPItem.query.filter_by(epp_id=epp_id, disponible=True).first()
-        if item:
-            item.disponible = False
-            item.trabajador_id = trabajador.id
-            db.session.add(item)
-
-    db.session.commit()
-
-    return jsonify({"success": True, "message": "EPPs actualizados correctamente"})
-
-@app.route("/api/trabajador/<int:trabajador_id>/epps", methods=["GET"])
-def epps_trabajador(trabajador_id):
-    trabajador = Trabajador.query.get(trabajador_id)
-    if not trabajador:
-        return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
-
-    # Todos los EPPs existentes
-    todos = EPP.query.all()
-
-    # IDs de los EPPs que realmente tiene asignados este trabajador
-    asignados = {item.epp_id for item in trabajador.epps_items}
-
-    data = []
-    for epp in todos:
-        data.append({
-            "id": epp.id,
-            "nombre": epp.nombre,
-            "tipo": epp.tipo,          # 👈 agregado para que el frontend pueda mostrarlo
-            "asignado": epp.id in asignados
-        })
-
-    return jsonify(data)
-
+    return jsonify({"success": True, "message": f"EPP asignado a {trabajador.nombre}"})
 
 # ----------------- SERVIR IMAGENES -----------------
 @app.route("/uploads/<path:filename>")
@@ -317,19 +228,15 @@ def uploaded_file(filename):
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        # Crear compañía de ejemplo si no existe
-        renault = Compania.query.filter_by(nombre="Renault").first()
-        if not renault:
-            renault = Compania(nombre="Renault")
-            db.session.add(renault)
+        # Crear compañía y jefe admin si no existen
+        compania = Compania.query.filter_by(nombre="EmpresaX").first()
+        if not compania:
+            compania = Compania(nombre="EmpresaX")
+            db.session.add(compania)
             db.session.commit()
-        
-        # Crear jefe admin si no existe
         admin = Jefe.query.filter_by(nombre="admin").first()
         if not admin:
-            admin = Jefe(nombre="admin", contrasena="admin", compania_id=renault.id)
+            admin = Jefe(nombre="admin", contrasena="admin", compania_id=compania.id)
             db.session.add(admin)
             db.session.commit()
-
     app.run(debug=True, port=5000)
-

@@ -3,16 +3,16 @@ import { Link, useLocation } from "react-router-dom";
 import "../styles/Navbar.css";
 import logo from "../assets/logo.png";
 import LoginModal from "./LoginModal";
-import RegisterPage from "./RegisterPage";
+import RegisterModal from "./RegisterModal";
 
 const Navbar = () => {
   const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [isLogged, setIsLogged] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = () =>
-      setIsLogged(localStorage.getItem("auth") === "true");
+    const checkAuth = () => setIsLogged(localStorage.getItem("auth") === "true");
     checkAuth();
     window.addEventListener("storage", checkAuth);
     return () => window.removeEventListener("storage", checkAuth);
@@ -27,17 +27,8 @@ const Navbar = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("auth");
-    localStorage.removeItem("jefe_id");
-    setIsLogged(false);
-  };
-
-  // Navbar para rutas protegidas (dashboard)
-  if (
-    location.pathname.startsWith("/dashboard") ||
-    location.pathname.startsWith("/addepp")
-  ) {
+  // ✅ Ajuste aquí: incluimos /dashboardepp
+  if (location.pathname === "/dashboard" || location.pathname === "/dashboardepp") {
     return (
       <nav className="navbar">
         <div className="navbar-logo">
@@ -50,17 +41,20 @@ const Navbar = () => {
           {isLogged && (
             <>
               <li>
-                <Link to="/dashboard" className="navbar-login">
-                  Dashboard
-                </Link>
+                <Link to="/dashboard" className="navbar-login">Dashboard</Link>
               </li>
               <li>
-                <Link to="/addepp" className="navbar-login">
-                  EPP
-                </Link>
+                <Link to="/dashboardepp" className="navbar-login">EPP</Link>
               </li>
               <li>
-                <button className="navbar-login" onClick={handleLogout}>
+                <button
+                  className="navbar-login"
+                  onClick={() => {
+                    localStorage.removeItem("auth");
+                    localStorage.removeItem("jefe_id");
+                    setIsLogged(false);
+                  }}
+                >
                   Cerrar sesión
                 </button>
               </li>
@@ -68,9 +62,7 @@ const Navbar = () => {
           )}
           {!isLogged && (
             <li>
-              <Link to="/" className="navbar-login">
-                Volver al Landing
-              </Link>
+              <Link to="/" className="navbar-login">Volver al Landing</Link>
             </li>
           )}
         </ul>
@@ -78,7 +70,6 @@ const Navbar = () => {
     );
   }
 
-  // Navbar pública (landing)
   return (
     <>
       <nav className="navbar">
@@ -90,43 +81,29 @@ const Navbar = () => {
 
         <ul className="navbar-links" style={{ paddingRight: "50px" }}>
           <li>
-            <a href="#hero" onClick={(e) => handleScroll(e, "hero")}>
-              Inicio
-            </a>
+            <a href="#hero" onClick={(e) => handleScroll(e, "hero")}>Inicio</a>
           </li>
           <li>
-            <a href="#sobre" onClick={(e) => handleScroll(e, "sobre")}>
-              Sobre la app
-            </a>
+            <a href="#sobre" onClick={(e) => handleScroll(e, "sobre")}>Sobre la app</a>
           </li>
           <li>
-            <a
-              href="#beneficios"
-              onClick={(e) => handleScroll(e, "beneficios")}
-            >
-              Beneficios
-            </a>
+            <a href="#beneficios" onClick={(e) => handleScroll(e, "beneficios")}>Beneficios</a>
           </li>
           <li>
-            <a href="#contacto" onClick={(e) => handleScroll(e, "contacto")}>
-              Contacto
-            </a>
+            <a href="#contacto" onClick={(e) => handleScroll(e, "contacto")}>Contacto</a>
           </li>
 
           {!isLogged && (
             <>
               <li>
-                <button
-                  className="navbar-login"
-                  onClick={() => setShowLogin(true)}
-                >
+                <button className="navbar-login" onClick={() => setShowLogin(true)}>
                   Iniciar sesión
                 </button>
               </li>
               <li>
-                <Link to="/register" className="navbar-login">
+                <button className="navbar-login" onClick={() => setShowRegister(true)}>
                   Registrar jefe
-                </Link>
+                </button>
               </li>
             </>
           )}
@@ -137,6 +114,10 @@ const Navbar = () => {
         show={showLogin}
         onClose={() => setShowLogin(false)}
         onLoginSuccess={() => setIsLogged(true)}
+      />
+      <RegisterModal
+        show={showRegister}
+        onClose={() => setShowRegister(false)}
       />
     </>
   );

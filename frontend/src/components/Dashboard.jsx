@@ -1,27 +1,42 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
-import AddWorkerModal from "./AddTrabajadorModal";
+import AddWorkerModal from "./AddTrabajadorModal"; // nuevo modal
 
 function Dashboard() {
   const [trabajadores, setTrabajadores] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [expandedIds, setExpandedIds] = useState([]); // IDs de trabajadores expandidos
+  const [searchTerm, setSearchTerm] = useState(""); // <-- estado de búsqueda
 
   const jefe_id = localStorage.getItem("jefe_id");
   const compania_id = localStorage.getItem("compania_id");
 
   useEffect(() => {
     if (!jefe_id) return;
+
     fetch(`http://localhost:5000/api/trabajadores?jefe_id=${jefe_id}`)
       .then(res => res.json())
       .then(data => setTrabajadores(data))
       .catch(err => console.error(err));
   }, [jefe_id]);
 
+  const handleChange = (id, field, value) => {
+    fetch(`http://localhost:5000/api/trabajadores/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    })
+      .then(res => res.json())
+      .then(() => {
+        setTrabajadores(prev =>
+          prev.map(t => (t.id === id ? { ...t, [field]: value } : t))
+        );
+      })
+      .catch(err => console.error(err));
+  };
+
   const handleDelete = (id) => {
     if (!window.confirm("¿Desea eliminar este trabajador?")) return;
+
     fetch(`http://localhost:5000/api/trabajadores/${id}`, { method: "DELETE" })
       .then(res => res.json())
       .then(data => {
@@ -30,16 +45,9 @@ function Dashboard() {
       .catch(err => console.error(err));
   };
 
-  const toggleExpand = (id) => {
-    setExpandedIds(prev =>
-      prev.includes(id) ? prev.filter(eid => eid !== id) : [...prev, id]
-    );
-  };
-
+  // Filtrado en tiempo real
   const filteredTrabajadores = trabajadores.filter(t =>
-    ((t?.nombre ?? "") + " " + (t?.apellido ?? ""))
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
+    t.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -48,6 +56,7 @@ function Dashboard() {
       <div style={{ padding: "20px" }}>
         <h1>Trabajadores</h1>
 
+        {/* Barra de búsqueda */}
         <input
           type="text"
           placeholder="Buscar trabajador..."
@@ -65,113 +74,59 @@ function Dashboard() {
         />
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
-          {filteredTrabajadores.map(t => {
-            const isExpanded = expandedIds.includes(t.id);
-            return (
-              <div key={t.id} style={{
-                border: "1px solid #ccc",
-                borderRadius: "8px",
-                padding: "15px",
-                width: "240px",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                transition: "all 0.3s"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h3>{t?.nombre ?? "Sin nombre"} {t?.apellido ?? ""}</h3>
-                  <button
-                    onClick={() => toggleExpand(t.id)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "18px"
-                    }}
-                  >
-                    {isExpanded ? "▲" : "▼"}
-                  </button>
+          {filteredTrabajadores.map(t => (
+            <div key={t.id} style={{
+              border: "1px solid #ccc",
+              borderRadius: "8px",
+              padding: "15px",
+              width: "200px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              position: "relative"
+            }}>
+              <h3>{t.nombre}</h3>
+              {["casco", "guantes", "lentes", "botas", "zapatos_seg"].map(epp => (
+                <div key={epp}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={t[epp]}
+                      onChange={e => handleChange(t.id, epp, e.target.checked)}
+                    /> {epp.charAt(0).toUpperCase() + epp.slice(1)}
+                  </label>
                 </div>
+              ))}
 
-                {isExpanded && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <p><strong>DNI:</strong> {t?.dni ?? "-"}</p>
-                    <p><strong>Tel:</strong> {t?.telefono ?? "-"}</p>
-                    <p><strong>Email:</strong> {t?.email ?? "-"}</p>
-                    <p><strong>Dirección:</strong> {t?.direccion ?? "-"}</p>
-                    <Link
-                      to={`/editar-epps/${t?.id}`}
-                      style={{
-                        background: "#1890ff",
-                        color: "#fff",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        padding: "6px 10px",
-                        textAlign: "center",
-                        textDecoration: "none",
-                        marginTop: "8px"
-                      }}
-                    >
-                      Editar EPPs
-                    </Link>
-                  </div>
-                )}
-
-                {!isExpanded && (
-                  <button
-                    onClick={() => toggleExpand(t.id)}
-                    style={{
-                      background: "#eee",
-                      border: "1px solid #ccc",
-                      borderRadius: "4px",
-                      padding: "4px",
-                      cursor: "pointer",
-                      marginTop: "5px"
-                    }}
-                  >
-                    Mostrar más
-                  </button>
-                )}
-
-                <button
-                  onClick={() => handleDelete(t?.id)}
-                  style={{
-                    background: "#ff4d4f",
-                    color: "#fff",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    padding: "4px 8px",
-                    marginTop: "5px"
-                  }}
-                >
-                  Eliminar
-                </button>
-              </div>
-            )
-          })}
+              <button onClick={() => handleDelete(t.id)} style={{
+                position: "absolute",
+                top: "5px",
+                right: "5px",
+                background: "#ff4d4f",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                padding: "2px 6px"
+              }}>X</button>
+            </div>
+          ))}
 
           {/* Botón para agregar trabajador */}
-          <div
-            onClick={() => setShowAddModal(true)}
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              border: "1px dashed #888",
-              borderRadius: "8px",
-              width: "200px",
-              height: "150px",
-              fontSize: "48px",
-              color: "#555",
-              cursor: "pointer"
-            }}
-          >
-            +
-          </div>
+          <div onClick={() => setShowAddModal(true)} style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            border: "1px dashed #888",
+            borderRadius: "8px",
+            width: "200px",
+            height: "150px",
+            fontSize: "48px",
+            color: "#555",
+            cursor: "pointer"
+          }}>+</div>
         </div>
       </div>
 
+      {/* Modal para agregar trabajador */}
       <AddWorkerModal
         show={showAddModal}
         onClose={() => setShowAddModal(false)}

@@ -24,20 +24,11 @@ class Jefe(db.Model):
 class Trabajador(db.Model):
     __tablename__ = "trabajador"
     id = db.Column(db.Integer, primary_key=True)
-
-    # Datos personales
     nombre = db.Column(db.String(50), nullable=False)
-    apellido = db.Column(db.String(50), nullable=False)
-    telefono = db.Column(db.String(20), nullable=True)
-    direccion = db.Column(db.String(150), nullable=True)
-    dni = db.Column(db.String(20), nullable=False, unique=True)
-    email = db.Column(db.String(120), nullable=True)
-
     jefe_id = db.Column(db.Integer, db.ForeignKey("jefe.id"), nullable=False)
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
 
     epps_items = db.relationship("EPPItem", backref="trabajador", lazy=True)
-
 
 class EPP(db.Model):
     __tablename__ = "epp"
@@ -56,7 +47,6 @@ class EPP(db.Model):
 class EPPItem(db.Model):
     __tablename__ = "epp_item"
     id = db.Column(db.Integer, primary_key=True)
-    jefe_id = db.Column(db.Integer, db.ForeignKey("jefe.id"), nullable=False)
     epp_id = db.Column(db.Integer, db.ForeignKey("epp.id"), nullable=False)
     trabajador_id = db.Column(db.Integer, db.ForeignKey("trabajador.id"), nullable=True)
     disponible = db.Column(db.Boolean, default=True)
