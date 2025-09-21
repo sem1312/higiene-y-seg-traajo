@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/LoginModal.css";
 
 const LoginModal = ({ show, onClose, onLoginSuccess }) => {
-  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ const LoginModal = ({ show, onClose, onLoginSuccess }) => {
       const response = await fetch("http://localhost:5000/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, contrasena }),
+        body: JSON.stringify({ email, contrasena }),
       });
 
       const data = await response.json();
@@ -24,12 +24,12 @@ const LoginModal = ({ show, onClose, onLoginSuccess }) => {
       if (data.success) {
         localStorage.setItem("auth", "true");
         localStorage.setItem("jefe_id", data.jefe_id);
-        localStorage.setItem("compania_id", data.compania_id); // nuevo
+        localStorage.setItem("compania_id", data.compania_id);
         if (onLoginSuccess) onLoginSuccess();
         onClose();
         navigate("/dashboard");
       } else {
-        setError(data.message || "Usuario o contraseña incorrectos");
+        setError(data.message || "Email o contraseña incorrectos");
       }
     } catch (err) {
       console.error("Error fetch:", err);
@@ -46,10 +46,10 @@ const LoginModal = ({ show, onClose, onLoginSuccess }) => {
         <h2>Iniciar Sesión</h2>
         <form onSubmit={handleSubmit}>
           <input
-            type="text"
-            placeholder="Usuario"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
           <input

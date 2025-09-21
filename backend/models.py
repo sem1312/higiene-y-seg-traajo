@@ -15,12 +15,16 @@ class Compania(db.Model):
 class Jefe(db.Model):
     __tablename__ = "jefe"
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(100), nullable=False, unique=True)
     contrasena = db.Column(db.String(100), nullable=False)
+    nombre_completo = db.Column(db.String(100), nullable=False)
+    telefono = db.Column(db.String(20), nullable=True)
+    dni = db.Column(db.String(20), nullable=True)
+    cargo = db.Column(db.String(50), nullable=True)
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
-
+    
     trabajadores = db.relationship("Trabajador", backref="jefe", lazy=True)
-
+    
 class Trabajador(db.Model):
     __tablename__ = "trabajador"
     id = db.Column(db.Integer, primary_key=True)

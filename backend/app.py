@@ -27,44 +27,70 @@ def allowed_file(filename):
 @app.route("/api/login", methods=["POST"])
 def login():
     data = request.get_json()
-    nombre = data.get("nombre")
+    email = data.get("email")
     contrasena = data.get("contrasena")
-    if not nombre or not contrasena:
+
+    if not email or not contrasena:
         return jsonify({"success": False, "message": "Faltan datos"}), 400
-    user = Jefe.query.filter_by(nombre=nombre).first()
+
+    user = Jefe.query.filter_by(email=email).first()
     if user and user.contrasena == contrasena:
-        return jsonify({"success": True, "message": "Login correcto", "jefe_id": user.id, "compania_id": user.compania_id})
-    return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"}), 401
+        return jsonify({
+            "success": True,
+            "message": "Login correcto",
+            "jefe_id": user.id,
+            "compania_id": user.compania_id
+        })
+    return jsonify({"success": False, "message": "Email o contraseña incorrectos"}), 401
 
-# ----------------- REGISTRAR COMPAÑIA -----------------
-@app.route("/api/registrar_compania", methods=["POST"])
-def registrar_compania():
+# ----------------- REGISTRAR CUENTA -----------------
+@app.route("/api/registrar_cuenta", methods=["POST"])
+def registrar_cuenta():
     data = request.get_json()
-    nombre = data.get("nombre")
-    if not nombre:
-        return jsonify({"success": False, "message": "Falta el nombre"}), 400
-    if Compania.query.filter_by(nombre=nombre).first():
-        return jsonify({"success": False, "message": "La compañía ya existe"}), 400
-    nueva = Compania(nombre=nombre)
-    db.session.add(nueva)
-    db.session.commit()
-    return jsonify({"success": True, "compania_id": nueva.id})
 
-# ----------------- REGISTRAR JEFE -----------------
-@app.route("/api/registrar_jefe", methods=["POST"])
-def registrar_jefe():
-    data = request.get_json()
-    nombre = data.get("nombre")
+    # Datos personales
+    nombre_completo = data.get("nombre_completo")
+    dni = data.get("dni")
+    email = data.get("email")
+    telefono = data.get("telefono")
+
+    # Datos de cuenta
     contrasena = data.get("contrasena")
-    compania_id = data.get("compania_id")
-    if not nombre or not contrasena or not compania_id:
-        return jsonify({"success": False, "message": "Faltan datos"}), 400
-    if Jefe.query.filter_by(nombre=nombre).first():
-        return jsonify({"success": False, "message": "El usuario ya existe"}), 400
-    jefe = Jefe(nombre=nombre, contrasena=contrasena, compania_id=compania_id)
+
+    # Datos profesionales
+    compania_nombre = data.get("compania")
+    cargo = data.get("cargo")
+
+    if not all([nombre_completo, dni, email, contrasena, compania_nombre]):
+        return jsonify({"success": False, "message": "Faltan datos obligatorios"}), 400
+
+    if Jefe.query.filter((Jefe.email == email) | (Jefe.dni == dni)).first():
+        return jsonify({"success": False, "message": "Ya existe un usuario con ese email/DNI"}), 400
+
+    # Crear compañía
+    compania = Compania(nombre=compania_nombre)
+    db.session.add(compania)
+    db.session.commit()
+
+    # Crear jefe con todos los datos
+    jefe = Jefe(
+        contrasena=contrasena,
+        nombre_completo=nombre_completo,
+        dni=dni,
+        email=email,
+        telefono=telefono,
+        cargo=cargo,
+        compania_id=compania.id
+    )
     db.session.add(jefe)
     db.session.commit()
-    return jsonify({"success": True, "jefe_id": jefe.id})
+
+    return jsonify({
+        "success": True,
+        "message": "Cuenta creada correctamente",
+        "jefe_id": jefe.id,
+        "compania_id": compania.id
+    })
 
 # ----------------- CRUD TRABAJADORES -----------------
 @app.route("/api/trabajadores", methods=["GET"])
@@ -99,7 +125,7 @@ def crear_trabajador():
     jefe_id = data.get("jefe_id")
     if not nombre or not jefe_id:
         return jsonify({"success": False, "message": "Faltan datos"}), 400
-    jefe = Jefe.query.get(jefe_id)
+    jefe = db.session.get(Jefe, jefe_id)
     if not jefe:
         return jsonify({"success": False, "message": "Jefe no encontrado"}), 404
     t = Trabajador(nombre=nombre, jefe_id=jefe_id, compania_id=jefe.compania_id)
@@ -109,7 +135,7 @@ def crear_trabajador():
 
 @app.route("/api/trabajadores/<int:id>", methods=["DELETE"])
 def eliminar_trabajador(id):
-    t = Trabajador.query.get(id)
+    t = db.session.get(Trabajador, id)
     if not t:
         return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
     db.session.delete(t)
@@ -210,7 +236,7 @@ def asignar_epp():
     data = request.get_json()
     trabajador_id = data.get("trabajador_id")
     epp_id = data.get("epp_id")
-    trabajador = Trabajador.query.get(trabajador_id)
+    trabajador = db.session.get(Trabajador, trabajador_id)
     item = EPPItem.query.filter_by(epp_id=epp_id, disponible=True).first()
     if not trabajador or not item:
         return jsonify({"success": False, "message": "Trabajador o EPP no encontrado"}), 404
@@ -228,15 +254,27 @@ def uploaded_file(filename):
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        # Crear compañía y jefe admin si no existen
+
+        # Crear compañía y admin si no existen
         compania = Compania.query.filter_by(nombre="EmpresaX").first()
         if not compania:
             compania = Compania(nombre="EmpresaX")
             db.session.add(compania)
             db.session.commit()
-        admin = Jefe.query.filter_by(nombre="admin").first()
+
+        # Admin con email en lugar de usuario
+        admin = Jefe.query.filter_by(email="admin@example.com").first()
         if not admin:
-            admin = Jefe(nombre="admin", contrasena="admin", compania_id=compania.id)
+            admin = Jefe(
+                contrasena="admin",
+                nombre_completo="Admin",
+                dni="00000000",
+                email="admin@example.com",
+                telefono="",
+                cargo="Administrador",
+                compania_id=compania.id
+            )
             db.session.add(admin)
             db.session.commit()
+
     app.run(debug=True, port=5000)

@@ -1,11 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Landing from "./components/Landing";
 import Dashboard from "./components/Dashboard";
 import DashboardEpp from "./components/DashboardEpp";
+import Register from "./components/Register";
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState(localStorage.getItem("auth") === "true");
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Verifica si hay datos de sesión en localStorage
+    const jefe_id = localStorage.getItem("jefe_id");
+    const compania_id = localStorage.getItem("compania_id");
+    if (jefe_id && compania_id) {
+      setLoggedIn(true);
+    }
+  }, []);
 
   return (
     <Router>
@@ -14,6 +24,12 @@ function App() {
         <Route
           path="/"
           element={<Landing onLoginSuccess={() => setLoggedIn(true)} />}
+        />
+
+        {/* Página de registro */}
+        <Route
+          path="/register"
+          element={<Register />}
         />
 
         {/* Dashboard protegido */}
@@ -27,7 +43,6 @@ function App() {
           path="/dashboardepp"
           element={loggedIn ? <DashboardEpp /> : <Navigate to="/" replace />}
         />
-
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
