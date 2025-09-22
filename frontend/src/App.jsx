@@ -4,6 +4,7 @@ import Landing from "./components/Landing";
 import Dashboard from "./components/Dashboard";
 import DashboardEpp from "./components/DashboardEpp";
 import Register from "./components/Register";
+import Profile from "./components/Profile";
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -32,6 +33,11 @@ function App() {
           element={<Register />}
         />
 
+        <Route
+          path="/profile"
+          element={loggedIn ? <Profile /> : <Navigate to="/" replace />}
+        />
+        
         {/* Dashboard protegido */}
         <Route
           path="/dashboard"

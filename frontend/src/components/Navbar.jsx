@@ -25,8 +25,12 @@ const Navbar = () => {
     }
   };
 
-  // Navbar para dashboards
-  if (location.pathname === "/dashboard" || location.pathname === "/dashboardepp") {
+  // Navbar para dashboards + profile
+  if (
+    location.pathname === "/dashboard" ||
+    location.pathname === "/dashboardepp" ||
+    location.pathname === "/profile"
+  ) {
     return (
       <nav className="navbar">
         <div className="navbar-logo">
@@ -43,6 +47,9 @@ const Navbar = () => {
               </li>
               <li>
                 <Link to="/dashboardepp" className="navbar-login">EPP</Link>
+              </li>
+              <li>
+                <Link to="/profile" className="navbar-login">Perfil</Link>
               </li>
               <li>
                 <button
@@ -99,7 +106,6 @@ const Navbar = () => {
               </button>
             </li>
             <li>
-              {/* Link directo a la página de registro */}
               <Link to="/register" className="navbar-login">
                 Registrar cuenta
               </Link>

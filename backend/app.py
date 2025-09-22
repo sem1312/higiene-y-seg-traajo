@@ -80,7 +80,8 @@ def registrar_cuenta():
         email=email,
         telefono=telefono,
         cargo=cargo,
-        compania_id=compania.id
+        compania_id=compania.id,
+        foto_url=None  # Inicialmente sin foto
     )
     db.session.add(jefe)
     db.session.commit()
@@ -209,7 +210,6 @@ def crear_epp():
     db.session.add(epp)
     db.session.commit()
 
-    # Crear EPPItems según stock
     for _ in range(stock):
         item = EPPItem(
             epp_id=epp.id,
@@ -245,6 +245,36 @@ def asignar_epp():
     db.session.commit()
     return jsonify({"success": True, "message": f"EPP asignado a {trabajador.nombre}"})
 
+# ----------------- FOTO DE PERFIL -----------------
+@app.route("/api/jefe/<int:jefe_id>", methods=["GET"])
+def get_jefe(jefe_id):
+    jefe = db.session.get(Jefe, jefe_id)
+    if not jefe:
+        return jsonify({}), 404
+    return jsonify({
+        "nombre_completo": jefe.nombre_completo,
+        "email": jefe.email,
+        "telefono": jefe.telefono,
+        "cargo": jefe.cargo,
+        "foto_url": getattr(jefe, "foto_url", None)
+    })
+
+@app.route("/api/jefe/<int:jefe_id>/foto", methods=["POST"])
+def subir_foto_jefe(jefe_id):
+    jefe = db.session.get(Jefe, jefe_id)
+    if not jefe:
+        return jsonify({"success": False, "message": "Jefe no encontrado"}), 404
+    if "foto" not in request.files:
+        return jsonify({"success": False, "message": "No hay archivo"}), 400
+    file = request.files["foto"]
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+        jefe.foto_url = f"uploads/{filename}"
+        db.session.commit()
+        return jsonify({"success": True, "foto_url": jefe.foto_url})
+    return jsonify({"success": False, "message": "Archivo inválido"}), 400
+
 # ----------------- SERVIR IMAGENES -----------------
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
@@ -262,7 +292,6 @@ if __name__ == "__main__":
             db.session.add(compania)
             db.session.commit()
 
-        # Admin con email en lugar de usuario
         admin = Jefe.query.filter_by(email="admin@example.com").first()
         if not admin:
             admin = Jefe(
@@ -272,7 +301,8 @@ if __name__ == "__main__":
                 email="admin@example.com",
                 telefono="",
                 cargo="Administrador",
-                compania_id=compania.id
+                compania_id=compania.id,
+                foto_url=None
             )
             db.session.add(admin)
             db.session.commit()

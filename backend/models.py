@@ -22,6 +22,7 @@ class Jefe(db.Model):
     dni = db.Column(db.String(20), nullable=True)
     cargo = db.Column(db.String(50), nullable=True)
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
+    foto_url = db.Column(db.String(200), nullable=True)
     
     trabajadores = db.relationship("Trabajador", backref="jefe", lazy=True)
     
