@@ -49,18 +49,26 @@ class EPP(db.Model):
     __tablename__ = "epp"
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
-    tipo = db.Column(db.String(20), nullable=False)
+    tipo = db.Column(db.String(30), nullable=False)  # un poco más de espacio
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
 
     posee_certificacion = db.Column(db.Boolean, default=False, nullable=False)
     marca = db.Column(db.String(100), nullable=True)
 
-    fecha_compra = db.Column(db.Date, nullable=False, default=date.today)
-    fecha_vencimiento = db.Column(db.Date, nullable=True)
+    fecha_fabricacion = db.Column(db.Date, nullable=False)  # obligatorio
+    fecha_compra = db.Column(db.Date, nullable=True)        # opcional
+
+    vida_util_meses = db.Column(db.Integer, nullable=True)  # sugerida por categoría, editable
+    fecha_caducidad_fabricante = db.Column(db.Date, nullable=True)
+
+    fecha_caducidad_real = db.Column(db.Date, nullable=False)  # se calcula automático
+
+    stock = db.Column(db.Integer, default=1, nullable=False)   # cantidad total
 
     imagen_url = db.Column(db.String(255), nullable=True)
 
     items = db.relationship("EPPItem", backref="epp", lazy=True)
+
 
 
 class EPPItem(db.Model):

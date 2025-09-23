@@ -1,14 +1,70 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-function AddEppModal({ show, onClose, compania_id, onAdded }) {
+function AddEppModal({ show, onClose, compania_id, onAdded, epp }) {
+  const [categoria, setCategoria] = useState("Casco");
   const [nombre, setNombre] = useState("");
-  const [tipo, setTipo] = useState("Casco");
+  const [marca, setMarca] = useState("");
+  const [poseeCertificacion, setPoseeCertificacion] = useState(false);
+  const [fechaFabricacion, setFechaFabricacion] = useState("");
   const [fechaCompra, setFechaCompra] = useState("");
+  const [vidaUtil, setVidaUtil] = useState("");
+  const [fechaCaducidadFabricante, setFechaCaducidadFabricante] = useState("");
   const [stock, setStock] = useState(1);
   const [imagen, setImagen] = useState(null);
-  const [poseeCertificacion, setPoseeCertificacion] = useState(false);
-  const [marca, setMarca] = useState("");
   const [error, setError] = useState("");
+  const [fechaCaducidadReal, setFechaCaducidadReal] = useState("");
+
+  const sugerenciasVidaUtil = {
+    Casco: 60,
+    Lentes: 24,
+    Guantes: 12,
+    Arnés: 60,
+    "Calzado de Seguridad": 36,
+    "Ropa de Seguridad": 24,
+    "Protección Auditiva": 24,
+    Respiradores: 24,
+  };
+
+  // 🔹 Cargar datos si es edición
+  useEffect(() => {
+    if (epp) {
+      setCategoria(epp.tipo || "Casco");
+      setNombre(epp.nombre || "");
+      setMarca(epp.marca || "");
+      setPoseeCertificacion(epp.posee_certificacion || false);
+      setFechaFabricacion(epp.fecha_fabricacion || "");
+      setFechaCompra(epp.fecha_compra || "");
+      setVidaUtil(epp.vida_util_meses || sugerenciasVidaUtil[epp.tipo] || 12);
+      setFechaCaducidadFabricante(epp.fecha_caducidad_fabricante || "");
+      setStock(epp.stock || 1);
+      setImagen(null);
+    } else {
+      // Reset para nuevo
+      setCategoria("Casco");
+      setNombre("");
+      setMarca("");
+      setPoseeCertificacion(false);
+      setFechaFabricacion("");
+      setFechaCompra("");
+      setVidaUtil(12);
+      setFechaCaducidadFabricante("");
+      setStock(1);
+      setImagen(null);
+    }
+  }, [epp, show]);
+
+  // 🔹 Calcular caducidad real
+  useEffect(() => {
+    if (fechaCaducidadFabricante) {
+      setFechaCaducidadReal(fechaCaducidadFabricante);
+    } else if (fechaFabricacion && vidaUtil) {
+      const f = new Date(fechaFabricacion);
+      f.setMonth(f.getMonth() + Number(vidaUtil));
+      setFechaCaducidadReal(f.toISOString().split("T")[0]);
+    } else {
+      setFechaCaducidadReal("");
+    }
+  }, [fechaFabricacion, vidaUtil, fechaCaducidadFabricante]);
 
   if (!show) return null;
 
@@ -16,41 +72,41 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
     e.preventDefault();
     setError("");
 
-    if (!nombre || !tipo || !fechaCompra || stock < 1) {
-      return setError("Por favor completa todos los campos obligatorios correctamente");
+    if (!categoria || !nombre || !marca || !fechaFabricacion || stock < 1) {
+      return setError("Completa todos los campos obligatorios correctamente");
     }
 
     try {
       const formData = new FormData();
+      formData.append("tipo", categoria);
       formData.append("nombre", nombre);
-      formData.append("tipo", tipo);
-      formData.append("compania_id", Number(compania_id));
-      formData.append("fecha_compra", fechaCompra);
+      formData.append("marca", marca);
+      formData.append("posee_certificacion", poseeCertificacion);
+      formData.append("fecha_fabricacion", fechaFabricacion);
+      formData.append("fecha_compra", fechaCompra || null);
+      formData.append("vida_util_meses", Number(vidaUtil));
+      formData.append("fecha_caducidad_fabricante", fechaCaducidadFabricante || null);
+      formData.append("fecha_caducidad_real", fechaCaducidadReal);
       formData.append("stock", Number(stock));
-      formData.append("posee_certificacion", poseeCertificacion); // ✅ nuevo campo
-      formData.append("marca", marca);                             // ✅ nuevo campo
+      formData.append("compania_id", Number(compania_id));
       if (imagen) formData.append("imagen", imagen);
 
-      const res = await fetch("http://localhost:5000/api/epp", {
-        method: "POST",
-        body: formData,
-      });
+      let url = "http://localhost:5000/api/epp";
+      let method = "POST";
 
+      if (epp && epp.id) {
+        url = `http://localhost:5000/api/epp/${epp.id}`;
+        method = "PUT";
+      }
+
+      const res = await fetch(url, { method, body: formData });
       const data = await res.json();
 
       if (data.success) {
         onAdded(data);
         onClose();
-        // Reset
-        setNombre("");
-        setTipo("Casco");
-        setFechaCompra("");
-        setStock(1);
-        setImagen(null);
-        setPoseeCertificacion(false);
-        setMarca("");
       } else {
-        setError(data.message || "Error al agregar el EPP");
+        setError(data.message || "Error al guardar EPP");
       }
     } catch (err) {
       console.error(err);
@@ -60,63 +116,52 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
 
   return (
     <div style={{
-      position: "fixed",
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.5)",
-      display: "flex", justifyContent: "center", alignItems: "center",
-      zIndex: 1000
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.5)", display: "flex",
+      justifyContent: "center", alignItems: "center", zIndex: 1000
     }}>
       <div style={{
-        background: "#fff",
-        borderRadius: "8px",
-        padding: "25px",
-        width: "420px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "15px"
+        background: "#fff", borderRadius: "8px", padding: "25px",
+        width: "480px", boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+        display: "flex", flexDirection: "column", gap: "15px"
       }}>
-        <h2 style={{ textAlign: "center", marginBottom: "10px" }}>Agregar EPP</h2>
+        <h2 style={{ textAlign: "center" }}>{epp ? "Editar EPP" : "Agregar EPP"}</h2>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <label>Categoria:</label>
-          <select value={tipo} onChange={e => setTipo(e.target.value)} required>
-            <option value="Casco">Casco</option>
-            <option value="Guantes">Guantes</option>
-            <option value="Lentes">Lentes</option>
-            <option value="Protección Auditiva">Protección Auditiva</option>
-            <option value="Respiradores">Respiradores</option>
-            <option value="Ropa de Seguridad">Ropa de Seguridad</option>
-            <option value="Arnés">Arnés</option>
-            <option value="Calzado de Seguridad">Calzado de Seguridad</option>
+          <label>Categoría:</label>
+          <select value={categoria} onChange={e => setCategoria(e.target.value)} required>
+            {Object.keys(sugerenciasVidaUtil).map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
           </select>
 
-          <label>Nombre del EPP:</label>
-          <input type="text" placeholder="Ej: Casco Industrial" value={nombre} onChange={e => setNombre(e.target.value)} required />
+          <label>Nombre:</label>
+          <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} required />
 
-          <label>Fecha de Compra:</label>
-          <input type="date" value={fechaCompra} onChange={e => setFechaCompra(e.target.value)} required />
+          <label>Marca:</label>
+          <input type="text" value={marca} onChange={e => setMarca(e.target.value)} required />
+
+          <label>
+            <input type="checkbox" checked={poseeCertificacion} onChange={e => setPoseeCertificacion(e.target.checked)} /> Posee certificación
+          </label>
+
+          <label>Fecha Fabricación:</label>
+          <input type="date" value={fechaFabricacion} onChange={e => setFechaFabricacion(e.target.value)} required />
+
+          <label>Fecha Compra (opcional):</label>
+          <input type="date" value={fechaCompra} onChange={e => setFechaCompra(e.target.value)} />
+
+          <label>Vida útil (meses):</label>
+          <input type="number" min={1} value={vidaUtil} onChange={e => setVidaUtil(e.target.value)} required />
+
+          <label>Fecha caducidad fabricante (opcional):</label>
+          <input type="date" value={fechaCaducidadFabricante} onChange={e => setFechaCaducidadFabricante(e.target.value)} />
+
+          <label>Fecha caducidad real:</label>
+          <input type="text" value={fechaCaducidadReal} readOnly style={{ background: "#eee" }} />
 
           <label>Stock:</label>
           <input type="number" min={1} value={stock} onChange={e => setStock(e.target.value)} required />
-
-          {/* ✅ NUEVOS CAMPOS */}
-          <label>
-            <input
-              type="checkbox"
-              checked={poseeCertificacion}
-              onChange={e => setPoseeCertificacion(e.target.checked)}
-            />{" "}
-            Posee certificación
-          </label>
-
-          <label>Marca:</label>
-          <input
-            type="text"
-            placeholder="Ej: 3M, Honeywell"
-            value={marca}
-            onChange={e => setMarca(e.target.value)}
-          />
 
           <label>Imagen (opcional):</label>
           <input type="file" accept="image/*" onChange={e => setImagen(e.target.files[0])} />
@@ -125,7 +170,7 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
             <button type="button" onClick={onClose}>Cancelar</button>
-            <button type="submit">Agregar</button>
+            <button type="submit">{epp ? "Guardar cambios" : "Agregar"}</button>
           </div>
         </form>
       </div>

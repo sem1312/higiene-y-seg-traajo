@@ -198,21 +198,24 @@ def get_epps():
     epps = EPP.query.filter_by(compania_id=compania_id).all()
     lista = []
     for e in epps:
-        stock = EPPItem.query.filter_by(epp_id=e.id, disponible=True).count()
         lista.append({
             "id": e.id,
             "nombre": e.nombre,
             "tipo": e.tipo,
-            "fecha_de_compra": e.fecha_compra.isoformat() if e.fecha_compra else None,
+            "fecha_fabricacion": e.fecha_fabricacion.isoformat() if e.fecha_fabricacion else None,
+            "vida_util_meses": e.vida_util_meses,
+            "fecha_caducidad_fabricante": e.fecha_caducidad_fabricante.isoformat() if e.fecha_caducidad_fabricante else None,
+            "fecha_caducidad_real": e.fecha_caducidad_real.isoformat() if e.fecha_caducidad_real else None,
             "imagen_url": e.imagen_url,
             "compania_id": e.compania_id,
-            "stock": stock,
+            "stock": e.stock,
             "marca": e.marca,
             "posee_certificacion": e.posee_certificacion
         })
     return jsonify(lista)
 
 
+# --- CREAR EPP ---
 @app.route("/api/epp", methods=["POST"])
 def crear_epp():
     tipo = request.form.get("tipo")
@@ -220,26 +223,66 @@ def crear_epp():
     compania_id = request.form.get("compania_id")
     stock = request.form.get("stock", 1)
 
-    # ✅ nuevos campos
-    posee_certificacion_str = request.form.get("posee_certificacion", "false")
-    # aceptamos true/false como string
-    posee_certificacion = str(posee_certificacion_str).lower() in ("true", "1", "yes")
+    # Validaciones obligatorias
+    if not tipo:
+        return jsonify({"success": False, "message": "El campo 'tipo' es obligatorio"}), 400
+    if not nombre:
+        return jsonify({"success": False, "message": "El campo 'nombre' es obligatorio"}), 400
+    if not compania_id:
+        return jsonify({"success": False, "message": "El campo 'compania_id' es obligatorio"}), 400
+
+    # ✅ campos nuevos
+    posee_certificacion = str(request.form.get("posee_certificacion", "false")).lower() in ("true", "1", "yes")
     marca = request.form.get("marca")
+
+    fecha_fabricacion_str = request.form.get("fecha_fabricacion")
+    
+    fecha_compra_str = request.form.get("fecha_compra")
+    fecha_compra = None
+    if fecha_compra_str:
+        try:
+            fecha_compra = datetime.strptime(fecha_compra_str, "%Y-%m-%d").date()
+        except ValueError:
+            fecha_compra = None
+        
+    vida_util_meses = request.form.get("vida_util_meses")
+    fecha_caducidad_fabricante_str = request.form.get("fecha_caducidad_fabricante")
 
     try:
         compania_id = int(compania_id)
-        stock = int(stock)
-        if stock < 1:
-            stock = 1
+        stock = max(1, int(stock))
+        vida_util_meses = int(vida_util_meses) if vida_util_meses else None
     except (ValueError, TypeError):
-        return jsonify({"success": False, "message": "compania_id o stock inválido"}), 400
+        return jsonify({"success": False, "message": "Datos inválidos"}), 400
 
-    fecha_compra_str = request.form.get("fecha_compra")
+    # Fecha de fabricación obligatoria
+    if not fecha_fabricacion_str:
+        return jsonify({"success": False, "message": "El campo 'fecha_fabricacion' es obligatorio"}), 400
+
     try:
-        fecha_compra = datetime.strptime(fecha_compra_str, "%Y-%m-%d").date() if fecha_compra_str else date.today()
+        fecha_fabricacion = datetime.strptime(fecha_fabricacion_str, "%Y-%m-%d").date()
     except ValueError:
-        return jsonify({"success": False, "message": "Formato de fecha inválido"}), 400
+        return jsonify({"success": False, "message": "Fecha de fabricación inválida"}), 400
 
+    # Fecha de caducidad fabricante opcional
+    fecha_caducidad_fabricante = None
+    if fecha_caducidad_fabricante_str:
+        try:
+            fecha_caducidad_fabricante = datetime.strptime(fecha_caducidad_fabricante_str, "%Y-%m-%d").date()
+        except ValueError:
+            try:
+                fecha_caducidad_fabricante = datetime.strptime(fecha_caducidad_fabricante_str, "%d/%m/%Y").date()
+            except ValueError:
+                fecha_caducidad_fabricante = None  # ignorar si sigue mal
+
+    # Calcular caducidad real
+    from dateutil.relativedelta import relativedelta
+    fecha_caducidad_real = fecha_caducidad_fabricante or (fecha_fabricacion + relativedelta(months=vida_util_meses) if vida_util_meses else None)
+    if not fecha_caducidad_real:
+        # Si no hay nada, poner por defecto 1 año desde fabricación
+        fecha_caducidad_real = fecha_fabricacion + relativedelta(years=1)
+
+    # Imagen
     imagen_url = None
     if "imagen" in request.files:
         file = request.files["imagen"]
@@ -248,27 +291,24 @@ def crear_epp():
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             imagen_url = f"uploads/{filename}"
 
-    # ✅ guardamos los campos nuevos
+    # Crear objeto EPP
     epp = EPP(
         tipo=tipo,
         nombre=nombre,
         compania_id=compania_id,
-        fecha_compra=fecha_compra,
-        fecha_vencimiento=None,
+        stock=stock,
+        fecha_fabricacion=fecha_fabricacion,
+        fecha_compra=fecha_compra,  # <--- agregado
+        vida_util_meses=vida_util_meses,
+        fecha_caducidad_fabricante=fecha_caducidad_fabricante,
+        fecha_caducidad_real=fecha_caducidad_real,
         imagen_url=imagen_url,
         posee_certificacion=posee_certificacion,
         marca=marca
     )
-    db.session.add(epp)
-    db.session.commit()
 
-    for _ in range(stock):
-        item = EPPItem(
-            epp_id=epp.id,
-            disponible=True,
-            fecha_compra=fecha_compra
-        )
-        db.session.add(item)
+
+    db.session.add(epp)
     db.session.commit()
 
     return jsonify({
@@ -276,14 +316,114 @@ def crear_epp():
         "id": epp.id,
         "nombre": epp.nombre,
         "tipo": epp.tipo,
-        "stock": stock,
-        "fecha_de_compra": epp.fecha_compra.isoformat() if epp.fecha_compra else None,
+        "stock": epp.stock,
+        "fecha_fabricacion": epp.fecha_fabricacion.isoformat(),
+        "fecha_compra": epp.fecha_compra.isoformat() if epp.fecha_compra else None,
+        "vida_util_meses": epp.vida_util_meses,
+        "fecha_caducidad_fabricante": epp.fecha_caducidad_fabricante.isoformat() if epp.fecha_caducidad_fabricante else None,
+        "fecha_caducidad_real": epp.fecha_caducidad_real.isoformat(),
         "imagen_url": epp.imagen_url,
         "compania_id": epp.compania_id,
         "posee_certificacion": epp.posee_certificacion,
         "marca": epp.marca
     })
 
+# --- ELIMINAR EPP ---
+@app.route("/api/epp/<int:id>", methods=["DELETE"])
+def eliminar_epp(id):
+    epp = db.session.get(EPP, id)
+    if not epp:
+        return jsonify({"success": False, "message": "EPP no encontrado"}), 404
+    db.session.delete(epp)
+    db.session.commit()
+    return jsonify({"success": True, "message": "EPP eliminado"})
+
+# --- EDITAR EPP --- 
+@app.route("/api/epp/<int:id>", methods=["PUT"])
+def editar_epp(id):
+    epp = db.session.get(EPP, id)
+    if not epp:
+        return jsonify({"success": False, "message": "EPP no encontrado"}), 404
+
+    tipo = request.form.get("tipo")
+    nombre = request.form.get("nombre")
+    marca = request.form.get("marca")
+    posee_certificacion = str(request.form.get("posee_certificacion", "false")).lower() in ("true", "1", "yes")
+    fecha_fabricacion_str = request.form.get("fecha_fabricacion")
+    fecha_caducidad_fabricante_str = request.form.get("fecha_caducidad_fabricante")
+    vida_util_meses = request.form.get("vida_util_meses")
+    stock = request.form.get("stock")
+    fecha_compra_str = request.form.get("fecha_compra")
+
+    # Actualizar campos simples
+    if tipo: epp.tipo = tipo
+    if nombre: epp.nombre = nombre
+    if marca: epp.marca = marca
+    epp.posee_certificacion = posee_certificacion
+    if stock: epp.stock = int(stock)
+
+    # Fechas
+    if fecha_fabricacion_str:
+        epp.fecha_fabricacion = datetime.strptime(fecha_fabricacion_str, "%Y-%m-%d").date()
+
+    # Fecha de caducidad del fabricante: solo si viene válida
+    if fecha_caducidad_fabricante_str and fecha_caducidad_fabricante_str.lower() != "null":
+        try:
+            epp.fecha_caducidad_fabricante = datetime.strptime(fecha_caducidad_fabricante_str, "%Y-%m-%d").date()
+        except ValueError:
+            epp.fecha_caducidad_fabricante = None
+    else:
+        epp.fecha_caducidad_fabricante = None
+
+    # Fecha de compra
+    if fecha_compra_str and fecha_compra_str.lower() != "null":
+        try:
+            epp.fecha_compra = datetime.strptime(fecha_compra_str, "%Y-%m-%d").date()
+        except ValueError:
+            epp.fecha_compra = None
+    else:
+        epp.fecha_compra = None
+
+    # Vida útil
+    if vida_util_meses:
+        try:
+            epp.vida_util_meses = int(vida_util_meses)
+        except ValueError:
+            epp.vida_util_meses = None
+
+    # Recalcular fecha_caducidad_real
+    from dateutil.relativedelta import relativedelta
+    epp.fecha_caducidad_real = epp.fecha_caducidad_fabricante or (
+        epp.fecha_fabricacion + relativedelta(months=epp.vida_util_meses) if epp.fecha_fabricacion and epp.vida_util_meses else None
+    )
+    if not epp.fecha_caducidad_real and epp.fecha_fabricacion:
+        epp.fecha_caducidad_real = epp.fecha_fabricacion + relativedelta(years=1)
+
+    # Imagen
+    if "imagen" in request.files:
+        file = request.files["imagen"]
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            epp.imagen_url = f"uploads/{filename}"
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "id": epp.id,
+        "nombre": epp.nombre,
+        "tipo": epp.tipo,
+        "stock": epp.stock,
+        "fecha_fabricacion": epp.fecha_fabricacion.isoformat() if epp.fecha_fabricacion else None,
+        "vida_util_meses": epp.vida_util_meses,
+        "fecha_caducidad_fabricante": epp.fecha_caducidad_fabricante.isoformat() if epp.fecha_caducidad_fabricante else None,
+        "fecha_caducidad_real": epp.fecha_caducidad_real.isoformat() if epp.fecha_caducidad_real else None,
+        "fecha_compra": epp.fecha_compra.isoformat() if epp.fecha_compra else None,
+        "imagen_url": epp.imagen_url,
+        "marca": epp.marca,
+        "posee_certificacion": epp.posee_certificacion
+    })
 
 # ----------------- ASIGNAR EPP -----------------
 @app.route("/api/asignar_epp", methods=["POST"])

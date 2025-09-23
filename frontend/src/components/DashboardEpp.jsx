@@ -5,10 +5,10 @@ import AddEppModal from "./AddEppModal";
 function DashboardEpp() {
   const [epps, setEpps] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editEpp, setEditEpp] = useState(null);
 
   const compania_id = localStorage.getItem("compania_id");
 
-  // ✅ Cargar EPPs existentes al iniciar
   useEffect(() => {
     if (!compania_id) return;
 
@@ -18,12 +18,21 @@ function DashboardEpp() {
       .catch(err => console.error(err));
   }, [compania_id]);
 
-  // Agrupar por tipo
   const categorias = epps.reduce((acc, epp) => {
     if (!acc[epp.tipo]) acc[epp.tipo] = [];
     acc[epp.tipo].push(epp);
     return acc;
   }, {});
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Seguro querés eliminar este EPP?")) return;
+    try {
+      await fetch(`http://localhost:5000/api/epp/${id}`, { method: "DELETE" });
+      setEpps(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div>
@@ -33,7 +42,7 @@ function DashboardEpp() {
         <h1>Elementos de Protección Personal</h1>
 
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => { setEditEpp(null); setShowAddModal(true); }}
           style={{
             margin: "10px 0",
             padding: "10px 20px",
@@ -60,7 +69,7 @@ function DashboardEpp() {
                     border: "1px solid #ccc",
                     borderRadius: "8px",
                     padding: "15px",
-                    width: "220px",
+                    width: "250px",
                     boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                     background: "#fff",
                     textAlign: "center"
@@ -74,27 +83,21 @@ function DashboardEpp() {
                     />
                   )}
                   <h3>{epp.nombre}</h3>
+                  <p><strong>Marca:</strong> {epp.marca || "N/A"}</p>
+                  <p><strong>Certificación:</strong> {epp.posee_certificacion ? "✅" : "❌"}</p>
+                  <p><strong>Stock:</strong> {epp.stock}</p>
+                  <p><strong>Fecha Fabricación:</strong> {epp.fecha_fabricacion ? new Date(epp.fecha_fabricacion).toLocaleDateString() : "N/A"}</p>
+                  <p><strong>Compra:</strong> {epp.fecha_compra ? new Date(epp.fecha_compra).toLocaleDateString() : "N/A"}</p>
+                  {epp.fecha_caducidad_fabricante ? (
+                    <p><strong>Caducidad fabricante:</strong> {new Date(epp.fecha_caducidad_fabricante).toLocaleDateString()}</p>
+                  ) : epp.fecha_caducidad_real ? (
+                    <p><strong>Caducidad real:</strong> {new Date(epp.fecha_caducidad_real).toLocaleDateString()}</p>
+                  ) : null}
 
-                  {/* Marca */}
-                  {epp.marca && <p><strong>Marca:</strong> {epp.marca}</p>}
-
-                  {/* Certificación */}
-                  <p>
-                    <strong>Certificación:</strong> {epp.posee_certificacion ? "✅" : "❌"}
-                  </p>
-
-                  {/* Stock */}
-                  {epp.stock !== undefined && (
-                    <p><strong>Stock:</strong> {epp.stock}</p>
-                  )}
-
-                  {/* Fecha de compra */}
-                  <p>
-                    <strong>Compra:</strong>{" "}
-                    {epp.fecha_de_compra
-                      ? new Date(epp.fecha_de_compra).toLocaleDateString()
-                      : "N/A"}
-                  </p>
+                  <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "10px" }}>
+                    <button onClick={() => { setEditEpp(epp); setShowAddModal(true); }}>Editar</button>
+                    <button onClick={() => handleDelete(epp.id)}>Eliminar</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -102,27 +105,20 @@ function DashboardEpp() {
         ))}
       </div>
 
-      {/* Modal para agregar EPP */}
       <AddEppModal
         show={showAddModal}
         onClose={() => setShowAddModal(false)}
         compania_id={compania_id}
+        epp={editEpp}
         onAdded={(nuevo) => {
-          // Aseguramos estructura igual al backend
-          setEpps(prev => [
-            ...prev,
-            {
-              id: nuevo.id,
-              nombre: nuevo.nombre,
-              tipo: nuevo.tipo,
-              stock: nuevo.stock || 1,
-              fecha_de_compra: nuevo.fecha_de_compra,
-              imagen_url: nuevo.imagen_url,
-              compania_id: nuevo.compania_id,
-              marca: nuevo.marca,
-              posee_certificacion: nuevo.posee_certificacion
+          setEpps(prev => {
+            const exists = prev.find(e => e.id === nuevo.id);
+            if (exists) {
+              return prev.map(e => e.id === nuevo.id ? nuevo : e);
+            } else {
+              return [...prev, nuevo];
             }
-          ]);
+          });
         }}
       />
     </div>
