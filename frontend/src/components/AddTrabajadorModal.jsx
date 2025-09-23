@@ -1,20 +1,36 @@
 import React, { useState } from "react";
-import "../styles/LoginModal.css"; // reutiliza estilos
+import "../styles/LoginModal.css";
 
-const AddTrabajadorModal = ({ show, onClose, jefe_id, compania_id, onAdded }) => {
-  const [nombre, setNombre] = useState("");
-  
-  const [asignarBotas, setAsignarBotas] = useState(false);
-  const [asignarCasco, setAsignarCasco] = useState(false);
-  const [asignarGuantes, setAsignarGuantes] = useState(false);
+const AddTrabajadorModal = ({
+  show,
+  onClose,
+  jefe_id,
+  compania_id,
+  onAdded,
+}) => {
+  const [form, setForm] = useState({
+    nombre: "",
+    apellido: "",
+    telefono: "",
+    direccion: "",
+    dni: "",
+    email: "",
+    puesto: "",
+    fecha_ingreso: "",
+    legajo: "",
+  });
   const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!nombre ) {
-      return setError("Debe ingresar nombre ");
+    if (!form.nombre || !form.apellido || !form.dni) {
+      return setError("Nombre, apellido y DNI son obligatorios");
     }
 
     try {
@@ -22,15 +38,9 @@ const AddTrabajadorModal = ({ show, onClose, jefe_id, compania_id, onAdded }) =>
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre,
-         
+          ...form,
           jefe_id,
           compania_id,
-          epp: {
-            botas: asignarBotas,
-            casco: asignarCasco,
-            guantes: asignarGuantes,
-          },
         }),
       });
 
@@ -52,43 +62,56 @@ const AddTrabajadorModal = ({ show, onClose, jefe_id, compania_id, onAdded }) =>
   return (
     <div className="modal-overlay">
       <div className="modal-container">
-        <button className="close-btn" onClick={onClose}>✖</button>
+        <button className="close-btn" onClick={onClose}>
+          ✖
+        </button>
         <h2>Agregar Trabajador</h2>
         <form onSubmit={handleSubmit}>
           <input
-            type="text"
-            placeholder="Nombre del trabajador"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
+            name="nombre"
+            placeholder="Nombre"
+            value={form.nombre}
+            onChange={handleChange}
             required
           />
-
-          <div className="epp-options">
-            <label>
-              <input
-                type="checkbox"
-                checked={asignarBotas}
-                onChange={() => setAsignarBotas(!asignarBotas)}
-              />
-              Botas
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={asignarCasco}
-                onChange={() => setAsignarCasco(!asignarCasco)}
-              />
-              Casco
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={asignarGuantes}
-                onChange={() => setAsignarGuantes(!asignarGuantes)}
-              />
-              Guantes
-            </label>
-          </div>
+          <input
+            name="apellido"
+            placeholder="Apellido"
+            value={form.apellido}
+            onChange={handleChange}
+            required
+          />
+          <input
+            name="dni"
+            placeholder="DNI"
+            value={form.dni}
+            onChange={handleChange}
+            required
+          />
+          <input
+            name="telefono"
+            placeholder="Teléfono"
+            value={form.telefono}
+            onChange={handleChange}
+          />
+          <input
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+          />
+          <input
+            name="direccion"
+            placeholder="Dirección"
+            value={form.direccion}
+            onChange={handleChange}
+          />
+          <input
+            name="legajo"
+            placeholder="Legajo"
+            value={form.legajo}
+            onChange={handleChange}
+          />
 
           <button type="submit">Agregar</button>
         </form>

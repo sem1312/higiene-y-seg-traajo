@@ -72,7 +72,7 @@ def registrar_cuenta():
     db.session.add(compania)
     db.session.commit()
 
-    # Crear jefe con todos los datos
+    # Crear jefe
     jefe = Jefe(
         contrasena=contrasena,
         nombre_completo=nombre_completo,
@@ -81,7 +81,7 @@ def registrar_cuenta():
         telefono=telefono,
         cargo=cargo,
         compania_id=compania.id,
-        foto_url=None  # Inicialmente sin foto
+        foto_url=None
     )
     db.session.add(jefe)
     db.session.commit()
@@ -106,6 +106,7 @@ def get_trabajadores():
             "id": t.id,
             "nombre": t.nombre,
             "compania_id": t.compania_id,
+            "legajo": t.legajo,
             "epps_asignados": [
                 {
                     "id": e.id,
@@ -122,17 +123,58 @@ def get_trabajadores():
 @app.route("/api/trabajadores", methods=["POST"])
 def crear_trabajador():
     data = request.get_json()
+
+    # Campos obligatorios
     nombre = data.get("nombre")
+    apellido = data.get("apellido")
+    dni = data.get("dni")
     jefe_id = data.get("jefe_id")
-    if not nombre or not jefe_id:
-        return jsonify({"success": False, "message": "Faltan datos"}), 400
+
+    if not nombre or not apellido or not dni or not jefe_id:
+        return jsonify({"success": False, "message": "Faltan datos obligatorios"}), 400
+
     jefe = db.session.get(Jefe, jefe_id)
     if not jefe:
         return jsonify({"success": False, "message": "Jefe no encontrado"}), 404
-    t = Trabajador(nombre=nombre, jefe_id=jefe_id, compania_id=jefe.compania_id)
+
+    # Campos opcionales
+    telefono = data.get("telefono")
+    direccion = data.get("direccion")
+    email = data.get("email")
+    legajo = data.get("legajo")
+
+    # Crear trabajador usando todos los campos del modelo
+    t = Trabajador(
+        nombre=nombre,
+        apellido=apellido,
+        dni=dni,
+        telefono=telefono,
+        direccion=direccion,
+        email=email,
+        legajo=legajo,
+        jefe_id=jefe.id,
+        compania_id=jefe.compania_id
+    )
+
     db.session.add(t)
     db.session.commit()
-    return jsonify({"success": True, "id": t.id, "nombre": t.nombre})
+
+    # Devolver al frontend todos los campos que necesitas mostrar
+    return jsonify({
+        "success": True,
+        "trabajador": {
+            "id": t.id,
+            "nombre": t.nombre,
+            "apellido": t.apellido,
+            "dni": t.dni,
+            "telefono": t.telefono,
+            "email": t.email,
+            "direccion": t.direccion,
+            "legajo": t.legajo
+        }
+    })
+
+
 
 @app.route("/api/trabajadores/<int:id>", methods=["DELETE"])
 def eliminar_trabajador(id):
@@ -244,6 +286,65 @@ def asignar_epp():
     item.trabajador_id = trabajador.id
     db.session.commit()
     return jsonify({"success": True, "message": f"EPP asignado a {trabajador.nombre}"})
+
+# --------- ✅ NUEVA RUTA: ACTUALIZAR EPPs DE UN TRABAJADOR -------------
+@app.route("/api/actualizar_epps_trabajador", methods=["POST"])
+def actualizar_epps_trabajador():
+    data = request.get_json()
+    trabajador_id = data.get("trabajador_id")
+    epp_ids = data.get("epp_ids", [])
+    fechas_vencimiento = data.get("fechas_vencimiento", {})
+
+    trabajador = db.session.get(Trabajador, trabajador_id)
+    if not trabajador:
+        return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
+
+    # Eliminar EPPItems antiguos
+    for item in trabajador.epps_items:
+        item.trabajador_id = None
+        item.fecha_vencimiento = None
+
+    # Asignar nuevos EPPs
+    for epp_id in epp_ids:
+        item = EPPItem.query.filter_by(epp_id=epp_id, trabajador_id=None).first()
+        if item:
+            item.trabajador_id = trabajador.id
+            # Convertir la fecha de string a date, o poner None si está vacía
+            fecha_str = fechas_vencimiento.get(str(epp_id))
+            if fecha_str:
+                try:
+                    item.fecha_vencimiento = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                except ValueError:
+                    item.fecha_vencimiento = None
+            else:
+                item.fecha_vencimiento = None
+
+
+    db.session.commit()
+    db.session.refresh(trabajador)
+
+    # Devolver el trabajador completo con los campos que el frontend necesita
+    return jsonify({
+        "success": True,
+        "trabajador": {
+            "id": trabajador.id,
+            "nombre": trabajador.nombre,
+            "apellido": trabajador.apellido,
+            "dni": trabajador.dni,
+            "telefono": trabajador.telefono,
+            "email": trabajador.email,
+            "direccion": trabajador.direccion,
+            "legajo": trabajador.legajo,
+            "epps_asignados": [
+                {"id": item.epp.id, "nombre": item.epp.nombre, "tipo": item.epp.tipo, "fecha_vencimiento": item.fecha_vencimiento}
+                for item in trabajador.epps_items if item.trabajador_id == trabajador.id
+            ]
+        }
+    })
+
+
+
+
 
 # ----------------- FOTO DE PERFIL -----------------
 @app.route("/api/jefe/<int:jefe_id>", methods=["GET"])
