@@ -52,12 +52,16 @@ class EPP(db.Model):
     tipo = db.Column(db.String(20), nullable=False)
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
 
+    posee_certificacion = db.Column(db.Boolean, default=False, nullable=False)
+    marca = db.Column(db.String(100), nullable=True)
+
     fecha_compra = db.Column(db.Date, nullable=False, default=date.today)
-    fecha_vencimiento = db.Column(db.Date, nullable=True)  # No la usamos aquí
+    fecha_vencimiento = db.Column(db.Date, nullable=True)
 
     imagen_url = db.Column(db.String(255), nullable=True)
 
     items = db.relationship("EPPItem", backref="epp", lazy=True)
+
 
 class EPPItem(db.Model):
     __tablename__ = "epp_item"

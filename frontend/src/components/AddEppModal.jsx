@@ -6,6 +6,8 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
   const [fechaCompra, setFechaCompra] = useState("");
   const [stock, setStock] = useState(1);
   const [imagen, setImagen] = useState(null);
+  const [poseeCertificacion, setPoseeCertificacion] = useState(false);
+  const [marca, setMarca] = useState("");
   const [error, setError] = useState("");
 
   if (!show) return null;
@@ -22,9 +24,11 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
       const formData = new FormData();
       formData.append("nombre", nombre);
       formData.append("tipo", tipo);
-      formData.append("compania_id", Number(compania_id)); // 🔹 convertir a número
+      formData.append("compania_id", Number(compania_id));
       formData.append("fecha_compra", fechaCompra);
-      formData.append("stock", Number(stock)); // 🔹 convertir a número
+      formData.append("stock", Number(stock));
+      formData.append("posee_certificacion", poseeCertificacion); // ✅ nuevo campo
+      formData.append("marca", marca);                             // ✅ nuevo campo
       if (imagen) formData.append("imagen", imagen);
 
       const res = await fetch("http://localhost:5000/api/epp", {
@@ -37,11 +41,14 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
       if (data.success) {
         onAdded(data);
         onClose();
+        // Reset
         setNombre("");
         setTipo("Casco");
         setFechaCompra("");
         setStock(1);
         setImagen(null);
+        setPoseeCertificacion(false);
+        setMarca("");
       } else {
         setError(data.message || "Error al agregar el EPP");
       }
@@ -92,6 +99,24 @@ function AddEppModal({ show, onClose, compania_id, onAdded }) {
 
           <label>Stock:</label>
           <input type="number" min={1} value={stock} onChange={e => setStock(e.target.value)} required />
+
+          {/* ✅ NUEVOS CAMPOS */}
+          <label>
+            <input
+              type="checkbox"
+              checked={poseeCertificacion}
+              onChange={e => setPoseeCertificacion(e.target.checked)}
+            />{" "}
+            Posee certificación
+          </label>
+
+          <label>Marca:</label>
+          <input
+            type="text"
+            placeholder="Ej: 3M, Honeywell"
+            value={marca}
+            onChange={e => setMarca(e.target.value)}
+          />
 
           <label>Imagen (opcional):</label>
           <input type="file" accept="image/*" onChange={e => setImagen(e.target.files[0])} />
