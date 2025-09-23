@@ -75,7 +75,15 @@ function DashboardEpp() {
                   )}
                   <h3>{epp.nombre}</h3>
 
-                  {/* Mostrar stock si existe */}
+                  {/* Marca */}
+                  {epp.marca && <p><strong>Marca:</strong> {epp.marca}</p>}
+
+                  {/* Certificación */}
+                  <p>
+                    <strong>Certificación:</strong> {epp.posee_certificacion ? "✅" : "❌"}
+                  </p>
+
+                  {/* Stock */}
                   {epp.stock !== undefined && (
                     <p><strong>Stock:</strong> {epp.stock}</p>
                   )}
@@ -107,10 +115,12 @@ function DashboardEpp() {
               id: nuevo.id,
               nombre: nuevo.nombre,
               tipo: nuevo.tipo,
-              stock: nuevo.stock || 1, // default 1 si no viene
+              stock: nuevo.stock || 1,
               fecha_de_compra: nuevo.fecha_de_compra,
               imagen_url: nuevo.imagen_url,
-              compania_id: nuevo.compania_id
+              compania_id: nuevo.compania_id,
+              marca: nuevo.marca,
+              posee_certificacion: nuevo.posee_certificacion
             }
           ]);
         }}

@@ -7,7 +7,7 @@ function Dashboard() {
   const [trabajadores, setTrabajadores] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedIds, setExpandedIds] = useState([]); // IDs de trabajadores expandidos
+  const [expandedIds, setExpandedIds] = useState([]);
 
   const jefe_id = localStorage.getItem("jefe_id");
   const compania_id = localStorage.getItem("compania_id");
@@ -83,7 +83,6 @@ function Dashboard() {
                   transition: "all 0.3s",
                 }}
               >
-                {/* Nombre y flecha */}
                 <div
                   style={{
                     display: "flex",
@@ -107,7 +106,7 @@ function Dashboard() {
                   </button>
                 </div>
 
-                {/* EPPs asignados siempre visibles */}
+                {/* EPPs asignados */}
                 {t.epps_asignados && t.epps_asignados.length > 0 && (
                   <div
                     style={{
@@ -123,12 +122,14 @@ function Dashboard() {
                         {e.fecha_vencimiento
                           ? ` - Vence: ${e.fecha_vencimiento}`
                           : ""}
+                        {e.marca ? ` - Marca: ${e.marca}` : ""}
+                        {" - Certificación: "}
+                        {e.posee_certificacion ? "✅" : "❌"}
                       </span>
                     ))}
                   </div>
                 )}
 
-                {/* Información extra solo al expandir */}
                 {isExpanded && (
                   <div
                     style={{
@@ -152,7 +153,6 @@ function Dashboard() {
                     <p>
                       <strong>Legajo:</strong> {t?.legajo ?? "-"}
                     </p>
-                    
 
                     <Link
                       to={`/editar-epps/${t?.id}`}
@@ -189,7 +189,7 @@ function Dashboard() {
             );
           })}
 
-          {/* Botón para agregar trabajador */}
+          {/* Botón agregar trabajador */}
           <div
             onClick={() => setShowAddModal(true)}
             style={{

@@ -105,6 +105,7 @@ def get_trabajadores():
         lista.append({
             "id": t.id,
             "nombre": t.nombre,
+            "apellido": t.apellido,
             "compania_id": t.compania_id,
             "legajo": t.legajo,
             "epps_asignados": [
@@ -112,13 +113,15 @@ def get_trabajadores():
                     "id": e.id,
                     "tipo": e.epp.tipo,
                     "nombre": e.epp.nombre,
-                    "fecha_compra": e.fecha_compra.isoformat(),
                     "fecha_vencimiento": e.fecha_vencimiento.isoformat() if e.fecha_vencimiento else None,
-                    "imagen_url": e.epp.imagen_url
+                    "imagen_url": e.epp.imagen_url,
+                    "marca": e.epp.marca,
+                    "posee_certificacion": e.epp.posee_certificacion
                 } for e in t.epps_items
             ]
         })
     return jsonify(lista)
+
 
 @app.route("/api/trabajadores", methods=["POST"])
 def crear_trabajador():
@@ -192,11 +195,6 @@ def get_epps():
     if not compania_id:
         return jsonify([])
 
-    try:
-        compania_id = int(compania_id)
-    except ValueError:
-        return jsonify([])
-
     epps = EPP.query.filter_by(compania_id=compania_id).all()
     lista = []
     for e in epps:
@@ -208,9 +206,12 @@ def get_epps():
             "fecha_de_compra": e.fecha_compra.isoformat() if e.fecha_compra else None,
             "imagen_url": e.imagen_url,
             "compania_id": e.compania_id,
-            "stock": stock
+            "stock": stock,
+            "marca": e.marca,
+            "posee_certificacion": e.posee_certificacion
         })
     return jsonify(lista)
+
 
 @app.route("/api/epp", methods=["POST"])
 def crear_epp():
@@ -218,6 +219,12 @@ def crear_epp():
     nombre = request.form.get("nombre")
     compania_id = request.form.get("compania_id")
     stock = request.form.get("stock", 1)
+
+    # ✅ nuevos campos
+    posee_certificacion_str = request.form.get("posee_certificacion", "false")
+    # aceptamos true/false como string
+    posee_certificacion = str(posee_certificacion_str).lower() in ("true", "1", "yes")
+    marca = request.form.get("marca")
 
     try:
         compania_id = int(compania_id)
@@ -241,13 +248,16 @@ def crear_epp():
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             imagen_url = f"uploads/{filename}"
 
+    # ✅ guardamos los campos nuevos
     epp = EPP(
         tipo=tipo,
         nombre=nombre,
         compania_id=compania_id,
         fecha_compra=fecha_compra,
         fecha_vencimiento=None,
-        imagen_url=imagen_url
+        imagen_url=imagen_url,
+        posee_certificacion=posee_certificacion,
+        marca=marca
     )
     db.session.add(epp)
     db.session.commit()
@@ -269,8 +279,11 @@ def crear_epp():
         "stock": stock,
         "fecha_de_compra": epp.fecha_compra.isoformat() if epp.fecha_compra else None,
         "imagen_url": epp.imagen_url,
-        "compania_id": epp.compania_id
+        "compania_id": epp.compania_id,
+        "posee_certificacion": epp.posee_certificacion,
+        "marca": epp.marca
     })
+
 
 # ----------------- ASIGNAR EPP -----------------
 @app.route("/api/asignar_epp", methods=["POST"])
@@ -325,22 +338,30 @@ def actualizar_epps_trabajador():
 
     # Devolver el trabajador completo con los campos que el frontend necesita
     return jsonify({
-        "success": True,
-        "trabajador": {
-            "id": trabajador.id,
-            "nombre": trabajador.nombre,
-            "apellido": trabajador.apellido,
-            "dni": trabajador.dni,
-            "telefono": trabajador.telefono,
-            "email": trabajador.email,
-            "direccion": trabajador.direccion,
-            "legajo": trabajador.legajo,
-            "epps_asignados": [
-                {"id": item.epp.id, "nombre": item.epp.nombre, "tipo": item.epp.tipo, "fecha_vencimiento": item.fecha_vencimiento}
-                for item in trabajador.epps_items if item.trabajador_id == trabajador.id
-            ]
-        }
-    })
+    "success": True,
+    "trabajador": {
+        "id": trabajador.id,
+        "nombre": trabajador.nombre,
+        "apellido": trabajador.apellido,
+        "dni": trabajador.dni,
+        "telefono": trabajador.telefono,
+        "email": trabajador.email,
+        "direccion": trabajador.direccion,
+        "legajo": trabajador.legajo,
+        "epps_asignados": [
+            {
+                "id": item.epp.id,
+                "nombre": item.epp.nombre,
+                "tipo": item.epp.tipo,
+                "fecha_vencimiento": item.fecha_vencimiento.isoformat() if item.fecha_vencimiento else None,
+                "marca": item.epp.marca,
+                "posee_certificacion": item.epp.posee_certificacion
+            }
+            for item in trabajador.epps_items if item.trabajador_id == trabajador.id
+        ]
+    }
+})
+
 
 
 
