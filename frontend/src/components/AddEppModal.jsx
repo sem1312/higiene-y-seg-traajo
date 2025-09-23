@@ -12,7 +12,6 @@ function AddEppModal({ show, onClose, compania_id, onAdded, epp }) {
   const [stock, setStock] = useState(1);
   const [imagen, setImagen] = useState(null);
   const [error, setError] = useState("");
-  const [fechaCaducidadReal, setFechaCaducidadReal] = useState("");
 
   const sugerenciasVidaUtil = {
     Casco: 60,
@@ -53,19 +52,6 @@ function AddEppModal({ show, onClose, compania_id, onAdded, epp }) {
     }
   }, [epp, show]);
 
-  // 🔹 Calcular caducidad real
-  useEffect(() => {
-    if (fechaCaducidadFabricante) {
-      setFechaCaducidadReal(fechaCaducidadFabricante);
-    } else if (fechaFabricacion && vidaUtil) {
-      const f = new Date(fechaFabricacion);
-      f.setMonth(f.getMonth() + Number(vidaUtil));
-      setFechaCaducidadReal(f.toISOString().split("T")[0]);
-    } else {
-      setFechaCaducidadReal("");
-    }
-  }, [fechaFabricacion, vidaUtil, fechaCaducidadFabricante]);
-
   if (!show) return null;
 
   const handleSubmit = async (e) => {
@@ -86,7 +72,6 @@ function AddEppModal({ show, onClose, compania_id, onAdded, epp }) {
       formData.append("fecha_compra", fechaCompra || null);
       formData.append("vida_util_meses", Number(vidaUtil));
       formData.append("fecha_caducidad_fabricante", fechaCaducidadFabricante || null);
-      formData.append("fecha_caducidad_real", fechaCaducidadReal);
       formData.append("stock", Number(stock));
       formData.append("compania_id", Number(compania_id));
       if (imagen) formData.append("imagen", imagen);
@@ -156,9 +141,6 @@ function AddEppModal({ show, onClose, compania_id, onAdded, epp }) {
 
           <label>Fecha caducidad fabricante (opcional):</label>
           <input type="date" value={fechaCaducidadFabricante} onChange={e => setFechaCaducidadFabricante(e.target.value)} />
-
-          <label>Fecha caducidad real:</label>
-          <input type="text" value={fechaCaducidadReal} readOnly style={{ background: "#eee" }} />
 
           <label>Stock:</label>
           <input type="number" min={1} value={stock} onChange={e => setStock(e.target.value)} required />

@@ -86,13 +86,7 @@ function DashboardEpp() {
                   <p><strong>Marca:</strong> {epp.marca || "N/A"}</p>
                   <p><strong>Certificación:</strong> {epp.posee_certificacion ? "✅" : "❌"}</p>
                   <p><strong>Stock:</strong> {epp.stock}</p>
-                  <p><strong>Fecha Fabricación:</strong> {epp.fecha_fabricacion ? new Date(epp.fecha_fabricacion).toLocaleDateString() : "N/A"}</p>
-                  <p><strong>Compra:</strong> {epp.fecha_compra ? new Date(epp.fecha_compra).toLocaleDateString() : "N/A"}</p>
-                  {epp.fecha_caducidad_fabricante ? (
-                    <p><strong>Caducidad fabricante:</strong> {new Date(epp.fecha_caducidad_fabricante).toLocaleDateString()}</p>
-                  ) : epp.fecha_caducidad_real ? (
-                    <p><strong>Caducidad real:</strong> {new Date(epp.fecha_caducidad_real).toLocaleDateString()}</p>
-                  ) : null}
+                  <p><strong>Vida útil:</strong> {epp.vida_util_meses} meses</p>
 
                   <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "10px" }}>
                     <button onClick={() => { setEditEpp(epp); setShowAddModal(true); }}>Editar</button>
