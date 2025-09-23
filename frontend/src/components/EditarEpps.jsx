@@ -31,7 +31,7 @@ function EditarEpps() {
             assigned[e.id] = {
               cantidad: e.cantidad || 1,
               fecha_entrega: e.fecha_entrega || new Date().toISOString().split("T")[0],
-              fecha_vencimiento: e.fecha_vencimiento || ""
+              fecha_vencimiento: e.fecha_vencimiento || calcularVencimiento(new Date(e.fecha_entrega || new Date()), e)
             };
           });
           setTrabajadorEpps(assigned);
@@ -39,6 +39,20 @@ function EditarEpps() {
       })
       .catch(err => console.error("Error obteniendo trabajador:", err));
   }, [trabajadorId]);
+
+  const calcularVencimiento = (fechaEntrega, epp) => {
+    if (!epp) return "";
+    let fecha = new Date(fechaEntrega);
+    if (epp.vida_util_meses) {
+      fecha.setMonth(fecha.getMonth() + Number(epp.vida_util_meses));
+    }
+    // Si hay fecha de caducidad del fabricante, no sobrepasarla
+    if (epp.fecha_caducidad_fabricante) {
+      const fab = new Date(epp.fecha_caducidad_fabricante);
+      if (fecha > fab) fecha = fab;
+    }
+    return fecha.toISOString().split("T")[0];
+  };
 
   const handleToggleEpp = (epp) => {
     setTrabajadorEpps(prev => {
@@ -64,34 +78,12 @@ function EditarEpps() {
       const copy = { ...prev };
       copy[eppId] = { ...copy[eppId], [field]: value };
       if (field === "fecha_entrega") {
-        // recalcular fecha de vencimiento
+        // recalcular fecha de vencimiento basado en fecha de entrega
         const epp = epps.find(e => e.id === eppId);
         copy[eppId].fecha_vencimiento = calcularVencimiento(new Date(value), epp);
       }
       return copy;
     });
-  };
-
-  const calcularVencimiento = (fechaEntrega, epp) => {
-    if (!epp) return "";
-    if (epp.fecha_caducidad_fabricante) {
-      return epp.fecha_caducidad_fabricante;
-    }
-    if (epp.vida_util_meses && epp.fecha_fabricacion) {
-      const fabricacion = new Date(epp.fecha_fabricacion);
-      const fechaCalculada = new Date(fechaEntrega);
-      const vidaUtilRestante = Math.max(epp.vida_util_meses - diffMeses(fabricacion, fechaEntrega), 0);
-      fechaCalculada.setMonth(fechaCalculada.getMonth() + vidaUtilRestante);
-      return fechaCalculada.toISOString().split("T")[0];
-    }
-    return "";
-  };
-
-  const diffMeses = (d1, d2) => {
-    const dt2 = new Date(d2);
-    return (
-      (dt2.getFullYear() - d1.getFullYear()) * 12 + (dt2.getMonth() - d1.getMonth())
-    );
   };
 
   const handleSave = async () => {
@@ -167,7 +159,7 @@ function EditarEpps() {
                   style={{ marginRight: "8px" }}
                   disabled={vencido || e.stock <= 0}
                 />
-                {e.nombre} ({e.tipo}) - Stock: {e.stock} - Vencimiento: {e.fecha_caducidad_fabricante || e.fecha_caducidad_real || "N/A"} {vencido && "❌ Vencido"}
+                {e.nombre} ({e.tipo}) - Stock: {e.stock} - Vida útil: {e.vida_util_meses} meses {vencido && "❌ Vencido"}
               </label>
 
               {assigned && (
