@@ -25,11 +25,12 @@ const Navbar = () => {
     }
   };
 
-  // Navbar para dashboards + profile
+  // Navbar para dashboards + alertas + profile
   if (
     location.pathname === "/dashboard" ||
     location.pathname === "/dashboardepp" ||
-    location.pathname === "/profile"
+    location.pathname === "/profile" ||
+    location.pathname === "/alertas"
   ) {
     return (
       <nav className="navbar">
@@ -49,7 +50,7 @@ const Navbar = () => {
                 <Link to="/dashboardepp" className="navbar-login">EPP</Link>
               </li>
               <li>
-                <Link to="/profile" className="navbar-login">Perfil</Link>
+                <Link to="/alertas" className="navbar-login">Alertas</Link>
               </li>
               <li>
                 <button
@@ -57,6 +58,7 @@ const Navbar = () => {
                   onClick={() => {
                     localStorage.removeItem("auth");
                     localStorage.removeItem("jefe_id");
+                    localStorage.removeItem("compania_id");
                     setIsLogged(false);
                   }}
                 >

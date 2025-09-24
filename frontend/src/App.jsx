@@ -6,7 +6,7 @@ import DashboardEpp from "./components/DashboardEpp";
 import Register from "./components/Register";
 import Profile from "./components/Profile";
 import EditarEpps from "./components/EditarEpps";
-
+import Alertas from "./components/Alertas"; // <--- import nuevo
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -35,11 +35,12 @@ function App() {
           element={<Register />}
         />
 
+        {/* Profile */}
         <Route
           path="/profile"
           element={loggedIn ? <Profile /> : <Navigate to="/" replace />}
         />
-        
+
         {/* Dashboard protegido */}
         <Route
           path="/dashboard"
@@ -52,11 +53,17 @@ function App() {
           element={loggedIn ? <DashboardEpp /> : <Navigate to="/" replace />}
         />
 
+        {/* Alertas protegido */}
+        <Route
+          path="/alertas"
+          element={loggedIn ? <Alertas /> : <Navigate to="/" replace />}
+        />
+
+        {/* Editar EPP */}
         <Route
           path="/editar-epps/:id"
           element={loggedIn ? <EditarEpps /> : <Navigate to="/" replace />}
         />
-
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

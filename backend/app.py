@@ -502,9 +502,24 @@ def actualizar_epps_trabajador():
     }
 })
 
+# --- REPONER STOCK --- 
+@app.route("/api/reponer_stock/<int:epp_id>", methods=["POST"])
+def reponer_stock(epp_id):
+    data = request.get_json()
+    cantidad = data.get("cantidad")
 
+    if cantidad is None or cantidad <= 0:
+        return jsonify({"success": False, "message": "Cantidad inválida"}), 400
 
+    epp = db.session.get(EPP, epp_id)
+    if not epp:
+        return jsonify({"success": False, "message": "EPP no encontrado"}), 404
 
+    # Actualizar stock
+    epp.stock += int(cantidad)
+    db.session.commit()
+
+    return jsonify({"success": True, "nuevo_stock": epp.stock})
 
 
 # ----------------- FOTO DE PERFIL -----------------
