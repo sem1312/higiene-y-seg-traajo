@@ -14,39 +14,41 @@ function EditarEpps() {
     const companiaId = localStorage.getItem("compania_id");
     const jefeId = localStorage.getItem("jefe_id");
 
-    // Traer todos los EPPs de la compañía
-    fetch(`http://localhost:5000/api/epps?compania_id=${companiaId}`)
-      .then(res => res.json())
-      .then(data => setEpps(data))
-      .catch(err => console.error("Error obteniendo EPPs:", err));
+    const fetchData = async () => {
+      // Fetch de todos los EPPs de la compañía
+      try {
+        const eppsRes = await fetch(`http://localhost:5000/api/epps?compania_id=${companiaId}`);
+        const eppsData = await eppsRes.json();
+        setEpps(eppsData);
 
-    // Traer EPPs asignados al trabajador
-    fetch(`http://localhost:5000/api/trabajadores?jefe_id=${jefeId}`)
-      .then(res => res.json())
-      .then(data => {
-        const t = data.find(t => t.id === trabajadorId);
+        // Fetch del trabajador específico para obtener sus EPPs asignados
+        const trabajadoresRes = await fetch(`http://localhost:5000/api/trabajadores?jefe_id=${jefeId}`);
+        const trabajadoresData = await trabajadoresRes.json();
+        const t = trabajadoresData.find((t) => t.id === trabajadorId);
+
         if (t && t.epps_asignados) {
           const assigned = {};
-          t.epps_asignados.forEach(e => {
+          t.epps_asignados.forEach((e) => {
             assigned[e.id] = {
               cantidad: e.cantidad || 1,
               fecha_entrega: e.fecha_entrega || new Date().toISOString().split("T")[0],
-              fecha_vencimiento: e.fecha_vencimiento || calcularVencimiento(new Date(e.fecha_entrega || new Date()), e)
+              fecha_vencimiento: e.fecha_vencimiento || calcularVencimiento(new Date(e.fecha_entrega || new Date()), e),
             };
           });
           setTrabajadorEpps(assigned);
         }
-      })
-      .catch(err => console.error("Error obteniendo trabajador:", err));
+      } catch (err) {
+        console.error("Error obteniendo datos:", err);
+      }
+    };
+    fetchData();
   }, [trabajadorId]);
 
   const calcularVencimiento = (fechaEntrega, epp) => {
-    if (!epp) return "";
+    if (!epp || !epp.vida_util_meses) return "";
     let fecha = new Date(fechaEntrega);
-    if (epp.vida_util_meses) {
-      fecha.setMonth(fecha.getMonth() + Number(epp.vida_util_meses));
-    }
-    // Si hay fecha de caducidad del fabricante, no sobrepasarla
+    fecha.setMonth(fecha.getMonth() + Number(epp.vida_util_meses));
+    
     if (epp.fecha_caducidad_fabricante) {
       const fab = new Date(epp.fecha_caducidad_fabricante);
       if (fecha > fab) fecha = fab;
@@ -55,7 +57,7 @@ function EditarEpps() {
   };
 
   const handleToggleEpp = (epp) => {
-    setTrabajadorEpps(prev => {
+    setTrabajadorEpps((prev) => {
       if (prev[epp.id]) {
         const copy = { ...prev };
         delete copy[epp.id];
@@ -66,20 +68,19 @@ function EditarEpps() {
           [epp.id]: {
             cantidad: 1,
             fecha_entrega: new Date().toISOString().split("T")[0],
-            fecha_vencimiento: calcularVencimiento(new Date(), epp)
-          }
+            fecha_vencimiento: calcularVencimiento(new Date(), epp),
+          },
         };
       }
     });
   };
 
   const handleChange = (eppId, field, value) => {
-    setTrabajadorEpps(prev => {
+    setTrabajadorEpps((prev) => {
       const copy = { ...prev };
       copy[eppId] = { ...copy[eppId], [field]: value };
       if (field === "fecha_entrega") {
-        // recalcular fecha de vencimiento basado en fecha de entrega
-        const epp = epps.find(e => e.id === eppId);
+        const epp = epps.find((e) => e.id === eppId);
         copy[eppId].fecha_vencimiento = calcularVencimiento(new Date(value), epp);
       }
       return copy;
@@ -90,18 +91,18 @@ function EditarEpps() {
     try {
       setLoading(true);
       const payload = Object.entries(trabajadorEpps).map(([eppId, data]) => ({
-        epp_id: parseInt(eppId),
+        epp_id: parseInt(eppId, 10),
         cantidad: data.cantidad,
         fecha_entrega: data.fecha_entrega,
-        fecha_vencimiento: data.fecha_vencimiento
+        fecha_vencimiento: data.fecha_vencimiento,
       }));
-
-      const res = await fetch("http://localhost:5000/api/actualizar_epps_trabajador", {
+      
+      const res = await fetch("http://localhost:5000/api/epps_trabajador", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           trabajador_id: trabajadorId,
-          asignaciones: payload
+          epps: payload,
         }),
       });
 
@@ -134,36 +135,53 @@ function EditarEpps() {
             backgroundColor: "#1890ff",
             color: "#fff",
             borderRadius: "4px",
-            textDecoration: "none"
+            textDecoration: "none",
           }}
         >
           ← Volver al Dashboard
         </Link>
-
         <h2>Asignar/Editar EPPs del trabajador</h2>
-
         {epps.length === 0 && <p>No hay EPPs disponibles</p>}
-
-        {epps.map(e => {
+        {epps.map((e) => {
           const assigned = trabajadorEpps[e.id];
-          const stockDisponible = e.stock - (assigned ? assigned.cantidad : 0);
           const vencido = e.fecha_caducidad_real && new Date(e.fecha_caducidad_real) < new Date();
-
+          const stockSuficiente = assigned || e.stock > 0;
           return (
-            <div key={e.id} style={{ marginBottom: "15px", borderBottom: "1px solid #ccc", paddingBottom: "8px" }}>
-              <label style={{ cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <div
+              key={e.id}
+              style={{
+                marginBottom: "15px",
+                borderBottom: "1px solid #ccc",
+                paddingBottom: "8px",
+              }}
+            >
+              <label
+                style={{
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={!!assigned}
                   onChange={() => handleToggleEpp(e)}
                   style={{ marginRight: "8px" }}
-                  disabled={vencido || e.stock <= 0}
+                  disabled={vencido || !stockSuficiente}
                 />
-                {e.nombre} ({e.tipo}) - Stock: {e.stock} - Vida útil: {e.vida_util_meses} meses {vencido && "❌ Vencido"}
+                {e.nombre} ({e.tipo}) - Stock: {e.stock} - Vida útil: {e.vida_util_meses} meses{" "}
+                {vencido && "❌ Vencido"}
               </label>
 
               {assigned && (
-                <div style={{ marginTop: "4px", display: "flex", gap: "10px", alignItems: "center" }}>
+                <div
+                  style={{
+                    marginTop: "4px",
+                    display: "flex",
+                    gap: "10px",
+                    alignItems: "center",
+                  }}
+                >
                   <label>
                     Cantidad:
                     <input
@@ -171,21 +189,19 @@ function EditarEpps() {
                       min={1}
                       max={e.stock}
                       value={assigned.cantidad}
-                      onChange={ev => handleChange(e.id, "cantidad", parseInt(ev.target.value))}
+                      onChange={(ev) => handleChange(e.id, "cantidad", parseInt(ev.target.value))}
                       style={{ width: "60px", marginLeft: "4px" }}
                     />
                   </label>
-
                   <label>
                     Fecha entrega:
                     <input
                       type="date"
                       value={assigned.fecha_entrega}
-                      onChange={ev => handleChange(e.id, "fecha_entrega", ev.target.value)}
+                      onChange={(ev) => handleChange(e.id, "fecha_entrega", ev.target.value)}
                       style={{ marginLeft: "4px" }}
                     />
                   </label>
-
                   <label>
                     Fecha vencimiento:
                     <input
@@ -200,7 +216,6 @@ function EditarEpps() {
             </div>
           );
         })}
-
         <button
           onClick={handleSave}
           disabled={loading}
@@ -212,7 +227,7 @@ function EditarEpps() {
             border: "none",
             borderRadius: "4px",
             cursor: "pointer",
-            opacity: loading ? 0.6 : 1
+            opacity: loading ? 0.6 : 1,
           }}
         >
           {loading ? "Guardando..." : "Guardar cambios"}

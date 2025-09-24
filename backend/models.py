@@ -37,38 +37,37 @@ class Trabajador(db.Model):
     direccion = db.Column(db.String(150), nullable=True)
     dni = db.Column(db.String(20), nullable=False, unique=True)
     email = db.Column(db.String(120), nullable=True)
-    legajo =db.Column(db.String(20), nullable=True)
+    legajo = db.Column(db.String(20), nullable=True)
 
     jefe_id = db.Column(db.Integer, db.ForeignKey("jefe.id"), nullable=False)
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
 
-    epps_items = db.relationship("EPPItem", backref="trabajador", lazy=True)
-
-
+    # El backref 'epps_items' se crea automáticamente desde EPPItem.
+    # NO definas la relación aquí para evitar el conflicto.
+    
 class EPP(db.Model):
     __tablename__ = "epp"
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
-    tipo = db.Column(db.String(30), nullable=False)  # un poco más de espacio
+    tipo = db.Column(db.String(30), nullable=False)
     compania_id = db.Column(db.Integer, db.ForeignKey("compania.id"), nullable=False)
 
     posee_certificacion = db.Column(db.Boolean, default=False, nullable=False)
     marca = db.Column(db.String(100), nullable=True)
 
-    fecha_fabricacion = db.Column(db.Date, nullable=False)  # obligatorio
-    fecha_compra = db.Column(db.Date, nullable=True)        # opcional
+    fecha_fabricacion = db.Column(db.Date, nullable=False)
+    fecha_compra = db.Column(db.Date, nullable=True)
 
-    vida_util_meses = db.Column(db.Integer, nullable=True)  # sugerida por categoría, editable
+    vida_util_meses = db.Column(db.Integer, nullable=True)
     fecha_caducidad_fabricante = db.Column(db.Date, nullable=True)
 
-    fecha_caducidad_real = db.Column(db.Date, nullable=False)  # se calcula automático
-
-    stock = db.Column(db.Integer, default=1, nullable=False)   # cantidad total
-
+    fecha_caducidad_real = db.Column(db.Date, nullable=False)
+    stock = db.Column(db.Integer, default=1, nullable=False)
     imagen_url = db.Column(db.String(255), nullable=True)
-
-    items = db.relationship("EPPItem", backref="epp", lazy=True)
-
+    
+    # Define la relación en el lado "uno" de la relación
+    # El backref 'epp_items' se crea automáticamente en EPPItem
+    # items = db.relationship("EPPItem", backref="epp", lazy=True)
 
 
 class EPPItem(db.Model):
@@ -79,3 +78,12 @@ class EPPItem(db.Model):
     disponible = db.Column(db.Boolean, default=True)
     fecha_compra = db.Column(db.Date, nullable=False, default=date.today)
     fecha_vencimiento = db.Column(db.Date, nullable=True)
+    cantidad = db.Column(db.Integer, default=1) 
+    fecha_entrega = db.Column(db.Date, default=date.today)
+    
+    # Esta es la definición correcta para ambas relaciones.
+    # El backref 'epp_items' crea la relación en EPP.
+    epp = db.relationship('EPP', backref=db.backref('epp_items', lazy=True))
+    
+    # El backref 'epps_items' crea la relación en Trabajador.
+    trabajador = db.relationship('Trabajador', backref=db.backref('epps_items', lazy=True))

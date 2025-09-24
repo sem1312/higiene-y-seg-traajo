@@ -425,82 +425,102 @@ def editar_epp(id):
         "posee_certificacion": epp.posee_certificacion
     })
 
-# ----------------- ASIGNAR EPP -----------------
-@app.route("/api/asignar_epp", methods=["POST"])
-def asignar_epp():
+@app.route("/api/epps_trabajador", methods=["POST"])
+def actualizar_epps_trabajador_unificado():
+    """
+    Actualiza los EPPs de un trabajador:
+    - libera EPPs que ya no están
+    - asigna nuevos EPPs disponibles
+    - actualiza datos como fecha de entrega, cantidad, etc.
+    """
     data = request.get_json()
+    print("Datos recibidos:", data)
     trabajador_id = data.get("trabajador_id")
-    epp_id = data.get("epp_id")
-    trabajador = db.session.get(Trabajador, trabajador_id)
-    item = EPPItem.query.filter_by(epp_id=epp_id, disponible=True).first()
-    if not trabajador or not item:
-        return jsonify({"success": False, "message": "Trabajador o EPP no encontrado"}), 404
-    item.disponible = False
-    item.trabajador_id = trabajador.id
-    db.session.commit()
-    return jsonify({"success": True, "message": f"EPP asignado a {trabajador.nombre}"})
-
-# --------- ✅ NUEVA RUTA: ACTUALIZAR EPPs DE UN TRABAJADOR -------------
-@app.route("/api/actualizar_epps_trabajador", methods=["POST"])
-def actualizar_epps_trabajador():
-    data = request.get_json()
-    trabajador_id = data.get("trabajador_id")
-    epp_ids = data.get("epp_ids", [])
-    fechas_vencimiento = data.get("fechas_vencimiento", {})
+    epps_a_asignar = data.get("epps", [])  # lista de {epp_id, cantidad, fecha_entrega, fecha_vencimiento}
 
     trabajador = db.session.get(Trabajador, trabajador_id)
     if not trabajador:
         return jsonify({"success": False, "message": "Trabajador no encontrado"}), 404
 
-    # Eliminar EPPItems antiguos
-    for item in trabajador.epps_items:
+    # IDs de EPPs que el trabajador debería tener
+    nuevos_ids = {e["epp_id"] for e in epps_a_asignar}
+
+    # Paso 1: Liberar EPPItems que ya no deberían estar asignados
+    items_a_liberar = [item for item in trabajador.epps_items if item.epp_id not in nuevos_ids]
+    for item in items_a_liberar:
         item.trabajador_id = None
         item.fecha_vencimiento = None
+        item.cantidad = 1
+        item.fecha_entrega = None
 
-    # Asignar nuevos EPPs
-    for epp_id in epp_ids:
+    # Paso 2: Asignar o actualizar EPPItems
+    for epp_data in epps_a_asignar:
+        epp_id = epp_data["epp_id"]
+        cantidad = epp_data.get("cantidad", 1)
+        fecha_entrega_str = epp_data.get("fecha_entrega")
+        fecha_vencimiento_str = epp_data.get("fecha_vencimiento")
+
+        # Buscar un item disponible (no asignado) para este EPP
         item = EPPItem.query.filter_by(epp_id=epp_id, trabajador_id=None).first()
+
+        if not item:
+            # Crear un item nuevo si hay stock
+            epp = db.session.get(EPP, epp_id)
+            if epp and epp.stock > 0:
+                item = EPPItem(
+                    epp_id=epp_id,
+                    trabajador_id=trabajador.id,
+                    cantidad=cantidad,
+                    fecha_entrega=datetime.strptime(fecha_entrega_str, "%Y-%m-%d").date() if fecha_entrega_str else None,
+                    fecha_vencimiento=datetime.strptime(fecha_vencimiento_str, "%Y-%m-%d").date() if fecha_vencimiento_str else None
+                )
+                db.session.add(item)
+                epp.stock -= 1
+
         if item:
+            # Actualizar los datos del EPPItem
             item.trabajador_id = trabajador.id
-            # Convertir la fecha de string a date, o poner None si está vacía
-            fecha_str = fechas_vencimiento.get(str(epp_id))
-            if fecha_str:
+            item.cantidad = cantidad
+
+            if fecha_entrega_str:
                 try:
-                    item.fecha_vencimiento = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                    item.fecha_entrega = datetime.strptime(fecha_entrega_str, "%Y-%m-%d").date()
+                except ValueError:
+                    item.fecha_entrega = None
+
+            if fecha_vencimiento_str:
+                try:
+                    item.fecha_vencimiento = datetime.strptime(fecha_vencimiento_str, "%Y-%m-%d").date()
                 except ValueError:
                     item.fecha_vencimiento = None
-            else:
-                item.fecha_vencimiento = None
-
 
     db.session.commit()
     db.session.refresh(trabajador)
 
-    # Devolver el trabajador completo con los campos que el frontend necesita
+    # Devolver trabajador con EPPs actualizados para reflejar cambios en el frontend
     return jsonify({
-    "success": True,
-    "trabajador": {
-        "id": trabajador.id,
-        "nombre": trabajador.nombre,
-        "apellido": trabajador.apellido,
-        "dni": trabajador.dni,
-        "telefono": trabajador.telefono,
-        "email": trabajador.email,
-        "direccion": trabajador.direccion,
-        "legajo": trabajador.legajo,
-        "epps_asignados": [
-            {
-                "id": item.epp.id,
-                "nombre": item.epp.nombre,
-                "tipo": item.epp.tipo,
-                "fecha_vencimiento": item.fecha_vencimiento.isoformat() if item.fecha_vencimiento else None,
-                "marca": item.epp.marca,
-                "posee_certificacion": item.epp.posee_certificacion
-            }
-            for item in trabajador.epps_items if item.trabajador_id == trabajador.id
-        ]
-    }
-})
+        "success": True,
+        "trabajador": {
+            "id": trabajador.id,
+            "nombre": trabajador.nombre,
+            "apellido": trabajador.apellido,
+            "epps_asignados": [
+                {
+                    "id": item.epp.id,
+                    "nombre": item.epp.nombre,
+                    "tipo": item.epp.tipo,
+                    "fecha_vencimiento": item.fecha_vencimiento.isoformat() if item.fecha_vencimiento else None,
+                    "fecha_entrega": item.fecha_entrega.isoformat() if item.fecha_entrega else None,
+                    "cantidad": item.cantidad,
+                    "marca": item.epp.marca,
+                    "posee_certificacion": item.epp.posee_certificacion
+                }
+                for item in trabajador.epps_items if item.trabajador_id == trabajador.id
+            ]
+        }
+    })
+
+
 
 # --- REPONER STOCK --- 
 @app.route("/api/reponer_stock/<int:epp_id>", methods=["POST"])
