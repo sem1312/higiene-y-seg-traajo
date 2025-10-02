@@ -99,6 +99,7 @@ def get_trabajadores():
     jefe_id = request.args.get("jefe_id", type=int)
     if not jefe_id:
         return jsonify([])
+
     trabajadores = Trabajador.query.filter_by(jefe_id=jefe_id).all()
     lista = []
     for t in trabajadores:
@@ -106,18 +107,22 @@ def get_trabajadores():
             "id": t.id,
             "nombre": t.nombre,
             "apellido": t.apellido,
+            "dni": t.dni,
+            "telefono": t.telefono,
+            "email": t.email,
+            "direccion": t.direccion,
             "compania_id": t.compania_id,
             "legajo": t.legajo,
             "epps_asignados": [
                 {
-                    "id": e.id,
+                    "id": e.epp.id,
                     "tipo": e.epp.tipo,
                     "nombre": e.epp.nombre,
                     "fecha_vencimiento": e.fecha_vencimiento.isoformat() if e.fecha_vencimiento else None,
                     "imagen_url": e.epp.imagen_url,
                     "marca": e.epp.marca,
                     "posee_certificacion": e.epp.posee_certificacion
-                } for e in t.epps_items
+                } for e in t.epps_items if e.trabajador_id == t.id
             ]
         })
     return jsonify(lista)
