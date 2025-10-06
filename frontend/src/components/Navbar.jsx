@@ -53,6 +53,9 @@ const Navbar = () => {
                 <Link to="/alertas" className="navbar-login">Alertas</Link>
               </li>
               <li>
+                <Link to="/profile" className="navbar-login">Perfil</Link>
+              </li>
+              <li>
                 <button
                   className="navbar-login"
                   onClick={() => {
